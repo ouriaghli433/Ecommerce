@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - develop
+
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker compose build backend
+
+      - name: Start services
+        run: docker compose up -d
+
+      - name: Run migrations
+        run: docker compose exec -T backend php artisan migrate --force
+
+      - name: Run tests
+        run: docker compose exec -T backend php artisan test
+
+      - name: Run Laravel Pint
+        run: docker compose exec -T backend ./vendor/bin/pint --test
