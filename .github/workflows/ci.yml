@@ -23,6 +23,15 @@ jobs:
       - name: Start services
         run: docker compose up -d
 
+      - name: Install Composer dependencies
+        run: docker compose exec -T backend composer install --no-interaction --prefer-dist --no-progress --no-blocking
+
+      - name: Create environment file
+        run: docker compose exec -T backend cp .env.example .env
+
+      - name: Generate application key
+        run: docker compose exec -T backend php artisan key:generate --force
+
       - name: Run migrations
         run: docker compose exec -T backend php artisan migrate --force
 
