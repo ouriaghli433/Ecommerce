@@ -20,14 +20,23 @@ jobs:
       - name: Build backend image
         run: docker compose build backend
 
+      - name: Scan backend image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ecommerce-backend:dev
+          format: table
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+
       - name: Start services
         run: docker compose up -d
 
-      - name: Install Composer dependencies
-        run: docker compose exec -T backend composer install --no-interaction --prefer-dist --no-progress --no-blocking
-
       - name: Create environment file
         run: docker compose exec -T backend cp .env.example .env
+
+      - name: Install Composer dependencies
+        run: docker compose exec -T backend composer install --no-interaction --prefer-dist --no-progress --no-security-blocking
 
       - name: Generate application key
         run: docker compose exec -T backend php artisan key:generate --force
