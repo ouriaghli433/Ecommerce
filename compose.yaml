@@ -5,6 +5,8 @@ services:
       context: .
       dockerfile: infrastructure/docker/backend/Dockerfile
 
+    image: ecommerce-backend:dev
+
     container_name: ecommerce-backend
 
     working_dir: /var/www/html
