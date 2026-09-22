@@ -7,24 +7,34 @@ use App\Http\Requests\Catalog\StoreCategoryRequest;
 use App\Http\Requests\Catalog\UpdateCategoryRequest;
 use App\Http\Resources\Catalog\CategoryResource;
 use App\Models\Category;
+use App\Services\Catalog\CatalogCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
 
 class CategoryController extends Controller
 {
-    public function index(Request $request): AnonymousResourceCollection
+    /**
+     * Cached: categories change rarely and every shop page reads them.
+     * The cache is cleared by any create/update/delete below.
+     */
+    public function index(Request $request, CatalogCache $cache): JsonResponse
     {
-        $query = Category::orderBy('name');
+        $isAdmin = $this->isAdmin($request);
 
-        // Customers and guests only see active categories.
-        if (! $this->isAdmin($request)) {
-            $query->where('is_active', true);
-        }
+        $payload = $cache->remember('categories', ['admin' => $isAdmin], function () use ($isAdmin) {
+            $query = Category::orderBy('name');
 
-        return CategoryResource::collection($query->get());
+            // Customers and guests only see active categories.
+            if (! $isAdmin) {
+                $query->where('is_active', true);
+            }
+
+            return CategoryResource::collection($query->get())->response()->getData(true);
+        });
+
+        return response()->json($payload);
     }
 
     public function show(Request $request, Category $category): CategoryResource
@@ -38,21 +48,25 @@ class CategoryController extends Controller
         return new CategoryResource($category);
     }
 
-    public function store(StoreCategoryRequest $request): CategoryResource
+    public function store(StoreCategoryRequest $request, CatalogCache $cache): CategoryResource
     {
         $category = Category::create($request->validated());
 
+        $cache->flush();
+
         return new CategoryResource($category);
     }
 
-    public function update(UpdateCategoryRequest $request, Category $category): CategoryResource
+    public function update(UpdateCategoryRequest $request, Category $category, CatalogCache $cache): CategoryResource
     {
         $category->update($request->validated());
 
+        $cache->flush();
+
         return new CategoryResource($category);
     }
 
-    public function destroy(Category $category): Response|JsonResponse
+    public function destroy(Category $category, CatalogCache $cache): Response|JsonResponse
     {
         Gate::authorize('delete', $category);
 
@@ -63,6 +77,8 @@ class CategoryController extends Controller
         }
 
         $category->delete();
+
+        $cache->flush();
 
         return response()->noContent();
     }

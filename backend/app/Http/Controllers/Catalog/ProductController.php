@@ -7,9 +7,9 @@ use App\Http\Requests\Catalog\StoreProductRequest;
 use App\Http\Requests\Catalog\UpdateProductRequest;
 use App\Http\Resources\Catalog\ProductResource;
 use App\Models\Product;
+use App\Services\Catalog\CatalogCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -19,24 +19,41 @@ class ProductController extends Controller
     /**
      * Filters: ?category_id=...  ?search=...
      */
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request, CatalogCache $cache): JsonResponse
     {
-        $query = Product::with(['category', 'inventory'])->latest();
+        $isAdmin = $this->isAdmin($request);
 
-        // Customers and guests only see active products (RG5).
-        if (! $this->isAdmin($request)) {
-            $query->where('is_active', true);
-        }
+        // What makes this page of results unique.
+        $parts = [
+            'admin' => $isAdmin,
+            'category_id' => $request->query('category_id'),
+            'search' => $request->query('search'),
+            'page' => $request->query('page', 1),
+        ];
 
-        if ($request->filled('category_id')) {
-            $query->where('category_id', $request->category_id);
-        }
+        // The listing is cached WITHOUT stock: `inventory` is not loaded here,
+        // so a cached page can never show an old available_stock. The product
+        // page (show) reads the stock live from the database.
+        $payload = $cache->remember('products', $parts, function () use ($request, $isAdmin) {
+            $query = Product::with('category')->latest();
 
-        if ($request->filled('search')) {
-            $query->where('name', 'ilike', '%'.$request->search.'%');
-        }
+            // Customers and guests only see active products (RG5).
+            if (! $isAdmin) {
+                $query->where('is_active', true);
+            }
 
-        return ProductResource::collection($query->paginate(15));
+            if ($request->filled('category_id')) {
+                $query->where('category_id', $request->category_id);
+            }
+
+            if ($request->filled('search')) {
+                $query->where('name', 'ilike', '%'.$request->search.'%');
+            }
+
+            return ProductResource::collection($query->paginate(15))->response()->getData(true);
+        });
+
+        return response()->json($payload);
     }
 
     public function show(Request $request, Product $product): ProductResource
@@ -50,7 +67,7 @@ class ProductController extends Controller
         return new ProductResource($product);
     }
 
-    public function store(StoreProductRequest $request): ProductResource
+    public function store(StoreProductRequest $request, CatalogCache $cache): ProductResource
     {
         // Every product has exactly one inventory record (RG8).
         // It starts empty; stock is added later with an inventory movement.
@@ -63,19 +80,24 @@ class ProductController extends Controller
 
         $product->load(['category', 'inventory']);
 
+        $cache->flush();
+
         return new ProductResource($product);
     }
 
-    public function update(UpdateProductRequest $request, Product $product): ProductResource
+    public function update(UpdateProductRequest $request, Product $product, CatalogCache $cache): ProductResource
     {
         $product->update($request->validated());
 
         $product->load(['category', 'inventory']);
 
+        // Price, name or visibility may have changed: drop the cached lists.
+        $cache->flush();
+
         return new ProductResource($product);
     }
 
-    public function destroy(Product $product): Response|JsonResponse
+    public function destroy(Product $product, CatalogCache $cache): Response|JsonResponse
     {
         Gate::authorize('delete', $product);
 
@@ -94,6 +116,8 @@ class ProductController extends Controller
             $product->inventory()->delete();
             $product->delete();
         });
+
+        $cache->flush();
 
         return response()->noContent();
     }
