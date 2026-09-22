@@ -12,6 +12,7 @@ use App\Http\Controllers\Order\OrderController;
 use App\Http\Controllers\Payment\PaymentController;
 use App\Http\Controllers\Refund\RefundController;
 use App\Http\Controllers\User\UserController;
+use App\Http\Controllers\Webhook\PaymentWebhookController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -19,6 +20,11 @@ use Illuminate\Support\Facades\Route;
 */
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+
+// The payment provider calls this one. No user token: the request is checked
+// by its signature instead (RG36).
+Route::post('/webhooks/payments/{provider}', [PaymentWebhookController::class, 'store'])
+    ->middleware('webhook.signature');
 
 Route::apiResource('categories', CategoryController::class)->only(['index', 'show']);
 Route::apiResource('products', ProductController::class)->only(['index', 'show']);
