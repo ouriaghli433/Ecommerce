@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Cart\CartController;
 use App\Http\Controllers\Catalog\CategoryController;
 use App\Http\Controllers\Catalog\ProductController;
+use App\Http\Controllers\Coupon\CouponController;
 use App\Http\Controllers\Inventory\InventoryController;
 use App\Http\Controllers\User\UserController;
 use Illuminate\Support\Facades\Route;
@@ -42,6 +43,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/cart/lines/{cartLine}', [CartController::class, 'removeLine']);
 
     // TODO(checkout): Route::post('/checkout', ...) turns the cart into an order.
+
+    // Coupons (admin only)
+    Route::apiResource('coupons', CouponController::class);
 
     // Stock (admin only)
     Route::get('/products/{product}/inventory', [InventoryController::class, 'show']);
