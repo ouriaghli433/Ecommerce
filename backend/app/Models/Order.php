@@ -13,7 +13,19 @@ class Order extends Model
 {
     use HasFactory, HasUuids;
 
-    public $timestamps = false;
+    /**
+     * Allowed status changes (RG23). delivered, cancelled and expired
+     * have no next status: they are terminal (RG24).
+     */
+    const TRANSITIONS = [
+        'pending_payment' => ['paid', 'cancelled', 'expired'],
+        'paid' => ['processing', 'cancelled'],
+        'processing' => ['shipped', 'cancelled'],
+        'shipped' => ['delivered'],
+        'delivered' => [],
+        'cancelled' => [],
+        'expired' => [],
+    ];
 
     protected $fillable = [
         'user_id',
@@ -50,6 +62,11 @@ class Order extends Model
             'paid_at' => 'datetime',
             'cancelled_at' => 'datetime',
         ];
+    }
+
+    public function canTransitionTo(string $status): bool
+    {
+        return in_array($status, self::TRANSITIONS[$this->status] ?? []);
     }
 
     public function user(): BelongsTo

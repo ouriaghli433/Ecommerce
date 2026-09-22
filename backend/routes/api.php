@@ -7,6 +7,7 @@ use App\Http\Controllers\Catalog\CategoryController;
 use App\Http\Controllers\Catalog\ProductController;
 use App\Http\Controllers\Coupon\CouponController;
 use App\Http\Controllers\Inventory\InventoryController;
+use App\Http\Controllers\Order\OrderController;
 use App\Http\Controllers\User\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -43,6 +44,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/cart/lines/{cartLine}', [CartController::class, 'removeLine']);
 
     // TODO(checkout): Route::post('/checkout', ...) turns the cart into an order.
+
+    // Orders: customers see their own, admins see all (OrderPolicy)
+    Route::get('/orders', [OrderController::class, 'index']);
+    Route::get('/orders/{order}', [OrderController::class, 'show']);
+    Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel']);
+    Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus']);
+
+    // TODO(payment): payment routes (start a payment for an order).
+    // TODO(webhooks): the provider webhook route goes outside auth:sanctum,
+    // protected by a signature check instead (RG36).
 
     // Coupons (admin only)
     Route::apiResource('coupons', CouponController::class);
