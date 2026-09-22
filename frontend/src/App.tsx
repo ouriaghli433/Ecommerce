@@ -1,8 +1,17 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from '@/auth/AuthContext'
-import { RedirectIfLoggedIn, RequireAuth } from '@/auth/RouteGuards'
+import { RedirectIfLoggedIn, RequireAdmin, RequireAuth } from '@/auth/RouteGuards'
+import { AdminLayout } from '@/components/layout/AdminLayout'
 import { ShopLayout } from '@/components/layout/ShopLayout'
+import { AdminCategoriesPage } from '@/pages/admin/AdminCategoriesPage'
+import { AdminCouponsPage } from '@/pages/admin/AdminCouponsPage'
+import { AdminDashboardPage } from '@/pages/admin/AdminDashboardPage'
+import { AdminInventoryPage } from '@/pages/admin/AdminInventoryPage'
+import { AdminOrderDetailPage } from '@/pages/admin/AdminOrderDetailPage'
+import { AdminOrdersPage } from '@/pages/admin/AdminOrdersPage'
+import { AdminProductsPage } from '@/pages/admin/AdminProductsPage'
+import { AdminUsersPage } from '@/pages/admin/AdminUsersPage'
 import { ToastProvider } from '@/components/ui/Toast'
 import { HomePage } from '@/pages/HomePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
@@ -62,6 +71,20 @@ export default function App() {
                 </Route>
 
                 <Route path="*" element={<NotFoundPage />} />
+              </Route>
+
+              {/* Admin area: its own layout, admins only. */}
+              <Route element={<RequireAdmin />}>
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<AdminDashboardPage />} />
+                  <Route path="orders" element={<AdminOrdersPage />} />
+                  <Route path="orders/:orderId" element={<AdminOrderDetailPage />} />
+                  <Route path="products" element={<AdminProductsPage />} />
+                  <Route path="products/:productId/inventory" element={<AdminInventoryPage />} />
+                  <Route path="categories" element={<AdminCategoriesPage />} />
+                  <Route path="coupons" element={<AdminCouponsPage />} />
+                  <Route path="users" element={<AdminUsersPage />} />
+                </Route>
               </Route>
             </Routes>
           </AuthProvider>
