@@ -13,6 +13,7 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class CartController extends Controller
@@ -84,7 +85,24 @@ class CartController extends Controller
      */
     private function activeCart(User $user): Cart
     {
-        return $user->carts()->firstOrCreate(['status' => 'active']);
+        $cart = $user->carts()->where('status', 'active')->first();
+
+        if ($cart) {
+            return $cart;
+        }
+
+        // No cart yet. Two requests can arrive here at the same moment, so the
+        // insert uses ON CONFLICT DO NOTHING against the partial unique index
+        // carts_one_active_per_user: one request inserts, the other inserts
+        // nothing, and both then read the same cart.
+        Cart::insertOrIgnore([
+            'id' => (string) Str::uuid(),
+            'user_id' => $user->id,
+            'status' => 'active',
+            'created_at' => now(),
+        ]);
+
+        return $user->carts()->where('status', 'active')->firstOrFail();
     }
 
     /**
