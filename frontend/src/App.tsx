@@ -1,9 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { AuthProvider } from '@/auth/AuthContext'
+import { RedirectIfLoggedIn, RequireAuth } from '@/auth/RouteGuards'
 import { ShopLayout } from '@/components/layout/ShopLayout'
 import { ToastProvider } from '@/components/ui/Toast'
 import { HomePage } from '@/pages/HomePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
+import { LoginPage } from '@/pages/auth/LoginPage'
+import { ProfilePage } from '@/pages/auth/ProfilePage'
+import { RegisterPage } from '@/pages/auth/RegisterPage'
 
 /**
  * React Query keeps the data coming from the API: it caches it, knows when
@@ -24,12 +29,26 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <BrowserRouter>
-          <Routes>
-            <Route element={<ShopLayout />}>
-              <Route path="/" element={<HomePage />} />
-              <Route path="*" element={<NotFoundPage />} />
-            </Route>
-          </Routes>
+          <AuthProvider>
+            <Routes>
+              <Route element={<ShopLayout />}>
+                <Route path="/" element={<HomePage />} />
+
+                {/* Already logged in? These two pages are useless. */}
+                <Route element={<RedirectIfLoggedIn />}>
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/register" element={<RegisterPage />} />
+                </Route>
+
+                {/* Needs a token. */}
+                <Route element={<RequireAuth />}>
+                  <Route path="/profile" element={<ProfilePage />} />
+                </Route>
+
+                <Route path="*" element={<NotFoundPage />} />
+              </Route>
+            </Routes>
+          </AuthProvider>
         </BrowserRouter>
       </ToastProvider>
     </QueryClientProvider>

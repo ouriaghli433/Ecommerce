@@ -1,20 +1,25 @@
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
+import { useAuth } from '@/auth/useAuth'
 import { cn } from '@/lib/utils'
 
 const APP_NAME = import.meta.env.VITE_APP_NAME ?? 'Verdant'
 
-const links = [
-  { to: '/', label: 'Home' },
-  { to: '/products', label: 'Shop' },
-  { to: '/orders', label: 'Orders' },
-]
-
 /**
  * Top navigation. On a phone the links collapse into a menu button.
+ * What is shown depends on the user, but that is only for comfort:
+ * Laravel checks every request anyway.
  */
 export function Navbar() {
+  const { isLoggedIn, isAdmin, user } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
+
+  const links = [
+    { to: '/', label: 'Home', show: true },
+    { to: '/products', label: 'Shop', show: true },
+    { to: '/orders', label: 'Orders', show: isLoggedIn },
+    { to: '/admin', label: 'Admin', show: isAdmin },
+  ].filter((link) => link.show)
 
   return (
     <header className="sticky top-0 z-40 border-b border-beige/50 bg-cream/90 backdrop-blur">
@@ -42,6 +47,31 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2">
+          {isLoggedIn ? (
+            <>
+              <Link
+                to="/notifications"
+                aria-label="Notifications"
+                className="hidden rounded-pill px-3 py-2 text-sm text-muted hover:text-navy sm:block"
+              >
+                Alerts
+              </Link>
+              <Link
+                to="/profile"
+                className="hidden rounded-pill px-3 py-2 text-sm font-medium text-navy hover:bg-navy-soft sm:block"
+              >
+                {user?.first_name ?? 'Account'}
+              </Link>
+            </>
+          ) : (
+            <Link
+              to="/login"
+              className="hidden rounded-pill px-3 py-2 text-sm font-medium text-navy hover:bg-navy-soft sm:block"
+            >
+              Log in
+            </Link>
+          )}
+
           <Link
             to="/cart"
             className="rounded-pill bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-light"
@@ -63,22 +93,24 @@ export function Navbar() {
 
       {menuOpen && (
         <nav className="border-t border-beige/50 bg-cream px-4 py-3 md:hidden">
-          {links.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              end={link.to === '/'}
-              onClick={() => setMenuOpen(false)}
-              className={({ isActive }) =>
-                cn(
-                  'block rounded-2xl px-4 py-3 text-sm font-medium',
-                  isActive ? 'bg-sage-soft text-navy' : 'text-muted',
-                )
-              }
-            >
-              {link.label}
-            </NavLink>
-          ))}
+          {[...links, isLoggedIn ? { to: '/profile', label: 'My account' } : { to: '/login', label: 'Log in' }].map(
+            (link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.to === '/'}
+                onClick={() => setMenuOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'block rounded-2xl px-4 py-3 text-sm font-medium',
+                    isActive ? 'bg-sage-soft text-navy' : 'text-muted',
+                  )
+                }
+              >
+                {link.label}
+              </NavLink>
+            ),
+          )}
         </nav>
       )}
     </header>
