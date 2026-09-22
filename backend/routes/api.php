@@ -9,6 +9,8 @@ use App\Http\Controllers\Checkout\CheckoutController;
 use App\Http\Controllers\Coupon\CouponController;
 use App\Http\Controllers\Inventory\InventoryController;
 use App\Http\Controllers\Order\OrderController;
+use App\Http\Controllers\Payment\PaymentController;
+use App\Http\Controllers\Refund\RefundController;
 use App\Http\Controllers\User\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -53,9 +55,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel']);
     Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus']);
 
-    // TODO(payment): payment routes (start a payment for an order).
-    // TODO(webhooks): the provider webhook route goes outside auth:sanctum,
-    // protected by a signature check instead (RG36).
+    // Payments: the customer starts one, the provider confirms it by webhook
+    Route::get('/orders/{order}/payments', [PaymentController::class, 'index']);
+    Route::post('/orders/{order}/payments', [PaymentController::class, 'store']);
+    Route::get('/payments/{payment}', [PaymentController::class, 'show']);
+
+    // Refunds (admin)
+    Route::get('/payments/{payment}/refunds', [RefundController::class, 'index']);
+    Route::post('/payments/{payment}/refunds', [RefundController::class, 'store']);
 
     // Coupons (admin only)
     Route::apiResource('coupons', CouponController::class);

@@ -7,12 +7,13 @@ use App\Http\Requests\Order\CancelOrderRequest;
 use App\Http\Requests\Order\UpdateOrderStatusRequest;
 use App\Http\Resources\Order\OrderResource;
 use App\Models\Order;
+use App\Services\Order\OrderService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
-// TODO(checkout): orders are created by POST /api/checkout, not here.
+// Orders are created by POST /api/checkout (CheckoutService), not here.
 class OrderController extends Controller
 {
     /**
@@ -42,24 +43,13 @@ class OrderController extends Controller
         return new OrderResource($order);
     }
 
-    public function cancel(CancelOrderRequest $request, Order $order): OrderResource
+    /**
+     * Cancelling releases reserved stock and refunds a paid order.
+     * All of that lives in OrderService (RG12, RG25).
+     */
+    public function cancel(CancelOrderRequest $request, Order $order, OrderService $orders): OrderResource
     {
-        $wasPaid = in_array($order->status, ['paid', 'processing']);
-
-        $order->update([
-            'status' => 'cancelled',
-            'cancelled_at' => now(),
-            'cancel_reason' => $request->reason,
-        ]);
-
-        // TODO(checkout): release the reserved stock (RG12) with InventoryService.
-        // TODO(payment): cancel any open provider payment.
-
-        if ($wasPaid) {
-            // TODO(refund): create a refund for the succeeded payment (RG25).
-        }
-
-        $order->load(['lines.product', 'coupon']);
+        $order = $orders->cancel($order, $request->user(), $request->reason);
 
         return new OrderResource($order);
     }
