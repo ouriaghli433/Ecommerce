@@ -52,15 +52,35 @@ The browser calls the API directly on port 8080; `VITE_API_URL` in
 
 ```bash
 docker compose exec backend php artisan db:seed
+# or, to start from an empty database:
+docker compose exec backend php artisan migrate:fresh --seed
 ```
 
 | Account | Password | Role |
 |---|---|---|
 | `admin@example.com` | `password` | admin |
+| `manager@example.com` | `password` | admin |
 | `customer@example.com` | `password` | customer |
 
-It also creates 4 categories, 9 products with stock, and the coupon
-`WELCOME10` (10% off orders above 200.00 MAD).
+What the seeders create (`backend/database/seeders/`):
+
+| Seeder | Data |
+|---|---|
+| `UserSeeder` | 2 admins + 25 customers |
+| `CategorySeeder` | 4 main categories, 8 sub-categories, 1 hidden |
+| `ProductSeeder` | 35 products with real stock, 2 of them not on sale |
+| `CouponSeeder` | 8 coupons: percent, fixed, with limits, expired, not started, off |
+| `AddressSeeder` | a default address per customer, a second one for some |
+| `OrderSeeder` | ~33 orders spread over the last 60 days, in every status |
+| `CartSeeder` | a few carts left open |
+
+**The orders are created through the real services** (`CheckoutService`,
+`PaymentService`, `OrderService`), not inserted by hand. So the demo data
+obeys the same rules as the shop: reserved stock matches the orders waiting
+for payment, paid orders have sale movements, cancelled ones released their
+stock, and the refunds are real. The mix is fixed, so you always get orders
+to pay, a refused payment, cancellations, expired orders, and two late
+payments with their automatic `late_payment` refund (RG30).
 
 **Notifications need a worker.** They are written by a queued job, so run
 `docker compose exec backend php artisan queue:work` (or
