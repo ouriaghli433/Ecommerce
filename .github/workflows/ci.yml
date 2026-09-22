@@ -9,6 +9,7 @@ on:
       - 'infra/**'
       - 'refactor/**'
       - 'hotfix/**'
+      - 'fix/**'
 
   pull_request:
     branches:
