@@ -9,6 +9,8 @@ import { NotFoundPage } from '@/pages/NotFoundPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { ProfilePage } from '@/pages/auth/ProfilePage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
+import { ProductDetailPage } from '@/pages/shop/ProductDetailPage'
+import { ProductsPage } from '@/pages/shop/ProductsPage'
 
 /**
  * React Query keeps the data coming from the API: it caches it, knows when
@@ -33,6 +35,8 @@ export default function App() {
             <Routes>
               <Route element={<ShopLayout />}>
                 <Route path="/" element={<HomePage />} />
+                <Route path="/products" element={<ProductsPage />} />
+                <Route path="/products/:productId" element={<ProductDetailPage />} />
 
                 {/* Already logged in? These two pages are useless. */}
                 <Route element={<RedirectIfLoggedIn />}>
