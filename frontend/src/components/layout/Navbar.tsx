@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '@/auth/useAuth'
+import { useCartCount } from '@/hooks/useCart'
 import { cn } from '@/lib/utils'
 
 const APP_NAME = import.meta.env.VITE_APP_NAME ?? 'Verdant'
@@ -12,6 +13,7 @@ const APP_NAME = import.meta.env.VITE_APP_NAME ?? 'Verdant'
  */
 export function Navbar() {
   const { isLoggedIn, isAdmin, user } = useAuth()
+  const cartCount = useCartCount()
   const [menuOpen, setMenuOpen] = useState(false)
 
   const links = [
@@ -74,9 +76,14 @@ export function Navbar() {
 
           <Link
             to="/cart"
-            className="rounded-pill bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-light"
+            className="flex items-center gap-2 rounded-pill bg-navy px-4 py-2 text-sm font-medium text-white hover:bg-navy-light"
           >
             Cart
+            {cartCount > 0 && (
+              <span className="rounded-pill bg-white px-2 text-xs font-semibold text-navy">
+                {cartCount}
+              </span>
+            )}
           </Link>
 
           <button

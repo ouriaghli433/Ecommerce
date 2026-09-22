@@ -9,6 +9,8 @@ import { NotFoundPage } from '@/pages/NotFoundPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { ProfilePage } from '@/pages/auth/ProfilePage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
+import { CartPage } from '@/pages/cart/CartPage'
+import { CheckoutPage } from '@/pages/checkout/CheckoutPage'
 import { ProductDetailPage } from '@/pages/shop/ProductDetailPage'
 import { ProductsPage } from '@/pages/shop/ProductsPage'
 
@@ -46,6 +48,8 @@ export default function App() {
 
                 {/* Needs a token. */}
                 <Route element={<RequireAuth />}>
+                  <Route path="/cart" element={<CartPage />} />
+                  <Route path="/checkout" element={<CheckoutPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                 </Route>
 
