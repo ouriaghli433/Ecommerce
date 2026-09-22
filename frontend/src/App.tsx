@@ -9,6 +9,8 @@ import { NotFoundPage } from '@/pages/NotFoundPage'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { ProfilePage } from '@/pages/auth/ProfilePage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
+import { AddressesPage } from '@/pages/account/AddressesPage'
+import { NotificationsPage } from '@/pages/account/NotificationsPage'
 import { CartPage } from '@/pages/cart/CartPage'
 import { CheckoutPage } from '@/pages/checkout/CheckoutPage'
 import { OrderDetailPage } from '@/pages/orders/OrderDetailPage'
@@ -54,6 +56,8 @@ export default function App() {
                   <Route path="/checkout" element={<CheckoutPage />} />
                   <Route path="/orders" element={<OrdersPage />} />
                   <Route path="/orders/:orderId" element={<OrderDetailPage />} />
+                  <Route path="/addresses" element={<AddressesPage />} />
+                  <Route path="/notifications" element={<NotificationsPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                 </Route>
 
