@@ -16,11 +16,11 @@ return new class extends Migration
                 ->constrained('orders');
 
             $table->enum('status', [
-                'PENDING',
-                'PROCESSING',
-                'SUCCEEDED',
-                'FAILED',
-            ])->default('PENDING');
+                'pending',
+                'processing',
+                'succeeded',
+                'failed',
+            ])->default('pending');
 
             $table->unsignedInteger('amount');
 
@@ -39,14 +39,14 @@ return new class extends Migration
         DB::statement("
             CREATE UNIQUE INDEX payments_one_active_per_order
             ON payments (order_id)
-            WHERE status IN ('PENDING', 'PROCESSING')
+            WHERE status IN ('pending', 'processing')
         ");
 
         // Only one successful payment per order.
         DB::statement("
             CREATE UNIQUE INDEX payments_one_succeeded_per_order
             ON payments (order_id)
-            WHERE status = 'SUCCEEDED'
+            WHERE status = 'succeeded'
         ");
     }
 

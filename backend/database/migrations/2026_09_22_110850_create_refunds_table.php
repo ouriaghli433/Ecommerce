@@ -18,16 +18,16 @@ return new class extends Migration
             $table->unsignedInteger('amount');
 
             $table->enum('status', [
-                'PENDING',
-                'SUCCEEDED',
-                'FAILED',
+                'pending',
+                'succeeded',
+                'failed',
             ]);
 
             $table->enum('reason', [
-                'LATE_PAYMENT',
-                'ORDER_CANCELLED',
-                'CUSTOMER_REQUEST',
-                'ADMIN',
+                'late_payment',
+                'order_cancelled',
+                'customer_request',
+                'admin',
             ]);
 
             $table->string('provider_ref', 255)->unique()->nullable();

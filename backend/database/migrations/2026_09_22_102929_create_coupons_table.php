@@ -14,8 +14,8 @@ return new class extends Migration
             $table->string('code', 50)->unique();
 
             $table->enum('type', [
-                'PERCENT',
-                'FIXED',
+                'percent',
+                'fixed',
             ]);
 
             $table->unsignedInteger('value');

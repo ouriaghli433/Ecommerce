@@ -16,10 +16,10 @@ return new class extends Migration
                 ->onDelete('restrict');
 
             $table->enum('status', [
-                'ACTIVE',
-                'CONVERTED',
-                'ABANDONED',
-            ])->default('ACTIVE');
+                'active',
+                'converted',
+                'abandoned',
+            ])->default('active');
 
             $table->timestamp('created_at');
         });

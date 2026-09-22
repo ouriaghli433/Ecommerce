@@ -25,11 +25,11 @@ return new class extends Migration
         });
 
         // One default address maximum per customer.
-        DB::statement("
+        DB::statement('
             CREATE UNIQUE INDEX addresses_one_default_per_user
             ON addresses (user_id)
             WHERE is_default = true
-        ");
+        ');
     }
 
     public function down(): void

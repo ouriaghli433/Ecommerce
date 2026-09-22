@@ -16,13 +16,13 @@ return new class extends Migration
                 ->onDelete('restrict');
 
             $table->enum('type', [
-                'PURCHASE',
-                'RESERVATION',
-                'RELEASE',
-                'SALE',
-                'RETURN',
-                'DAMAGE',
-                'ADJUSTMENT',
+                'purchase',
+                'reservation',
+                'release',
+                'sale',
+                'return',
+                'damage',
+                'adjustment',
             ]);
 
             $table->integer('quantity');

@@ -23,7 +23,7 @@ return new class extends Migration
 
             $table->unsignedInteger('unit_price');
 
-            $table->unique(['cart_id', 'product_id']); 
+            $table->unique(['cart_id', 'product_id']);
         });
     }
 

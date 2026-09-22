@@ -25,14 +25,14 @@ return new class extends Migration
                 ->nullOnDelete();
 
             $table->enum('status', [
-                'PENDING_PAYMENT',
-                'PAID',
-                'PROCESSING',
-                'SHIPPED',
-                'DELIVERED',
-                'CANCELLED',
-                'EXPIRED',
-            ])->default('PENDING_PAYMENT');
+                'pending_payment',
+                'paid',
+                'processing',
+                'shipped',
+                'delivered',
+                'cancelled',
+                'expired',
+            ])->default('pending_payment');
 
             $table->unsignedInteger('subtotal');
             $table->unsignedInteger('discount_amount');
