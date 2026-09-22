@@ -36,6 +36,7 @@ services:
 
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/docker/postgres/init:/docker-entrypoint-initdb.d:ro
 
   nginx:
     image: nginx:alpine
