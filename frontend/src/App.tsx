@@ -11,6 +11,8 @@ import { ProfilePage } from '@/pages/auth/ProfilePage'
 import { RegisterPage } from '@/pages/auth/RegisterPage'
 import { CartPage } from '@/pages/cart/CartPage'
 import { CheckoutPage } from '@/pages/checkout/CheckoutPage'
+import { OrderDetailPage } from '@/pages/orders/OrderDetailPage'
+import { OrdersPage } from '@/pages/orders/OrdersPage'
 import { ProductDetailPage } from '@/pages/shop/ProductDetailPage'
 import { ProductsPage } from '@/pages/shop/ProductsPage'
 
@@ -50,6 +52,8 @@ export default function App() {
                 <Route element={<RequireAuth />}>
                   <Route path="/cart" element={<CartPage />} />
                   <Route path="/checkout" element={<CheckoutPage />} />
+                  <Route path="/orders" element={<OrdersPage />} />
+                  <Route path="/orders/:orderId" element={<OrderDetailPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                 </Route>
 
