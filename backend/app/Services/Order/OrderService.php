@@ -2,6 +2,7 @@
 
 namespace App\Services\Order;
 
+use App\Jobs\SendOrderNotificationJob;
 use App\Models\Order;
 use App\Models\User;
 use App\Services\Inventory\InventoryService;
@@ -77,6 +78,8 @@ class OrderService
             );
         }
 
+        SendOrderNotificationJob::dispatch($order->id, 'order_cancelled');
+
         return $result['order']->fresh(['lines.product', 'coupon']);
     }
 
@@ -121,6 +124,8 @@ class OrderService
 
         if ($expired) {
             $this->payments->cancelOpenProviderPayments($order->fresh());
+
+            SendOrderNotificationJob::dispatch($order->id, 'order_expired');
         }
 
         return $expired;

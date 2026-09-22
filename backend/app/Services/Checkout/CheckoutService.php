@@ -2,6 +2,7 @@
 
 namespace App\Services\Checkout;
 
+use App\Jobs\SendOrderNotificationJob;
 use App\Models\Address;
 use App\Models\Cart;
 use App\Models\Order;
@@ -29,7 +30,7 @@ class CheckoutService
 
     public function checkout(User $user, Address $address, ?string $couponCode = null): Order
     {
-        return DB::transaction(function () use ($user, $address, $couponCode) {
+        $order = DB::transaction(function () use ($user, $address, $couponCode) {
             $cart = $this->activeCartWithLines($user);
 
             // 1. Lock the stock of every product in the cart (same order every time).
@@ -121,6 +122,12 @@ class CheckoutService
 
             return $order->load(['lines.product', 'coupon']);
         });
+
+        // Side effect, queued: telling the customer is not part of the money
+        // and stock work above, so it must not be able to break it.
+        SendOrderNotificationJob::dispatch($order->id, 'order_created');
+
+        return $order;
     }
 
     /**

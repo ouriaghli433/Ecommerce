@@ -8,6 +8,7 @@ use App\Http\Controllers\Catalog\ProductController;
 use App\Http\Controllers\Checkout\CheckoutController;
 use App\Http\Controllers\Coupon\CouponController;
 use App\Http\Controllers\Inventory\InventoryController;
+use App\Http\Controllers\Notification\NotificationController;
 use App\Http\Controllers\Order\OrderController;
 use App\Http\Controllers\Payment\PaymentController;
 use App\Http\Controllers\Refund\RefundController;
@@ -41,6 +42,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // The logged-in customer's own delivery addresses
     Route::apiResource('addresses', AddressController::class);
+
+    // In-app notifications of the logged-in user
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'markAllAsRead']);
 
     Route::apiResource('categories', CategoryController::class)->only(['store', 'update', 'destroy']);
     Route::apiResource('products', ProductController::class)->only(['store', 'update', 'destroy']);

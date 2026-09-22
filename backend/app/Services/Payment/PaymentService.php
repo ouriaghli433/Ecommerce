@@ -2,6 +2,7 @@
 
 namespace App\Services\Payment;
 
+use App\Jobs\SendOrderNotificationJob;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Services\Inventory\InventoryService;
@@ -127,6 +128,14 @@ class PaymentService
         if ($lateRefundNeeded) {
             // Outside the transaction: this calls the provider (RG30).
             $this->refunds->create($payment->fresh(), $payment->amount, 'late_payment');
+
+            SendOrderNotificationJob::dispatch($payment->order_id, 'refund_processed');
+
+            return;
+        }
+
+        if ($payment->fresh()->status === 'succeeded') {
+            SendOrderNotificationJob::dispatch($payment->order_id, 'order_paid');
         }
     }
 
