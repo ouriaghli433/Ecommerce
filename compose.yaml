@@ -53,6 +53,33 @@ services:
     depends_on:
       - backend
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    image: ecommerce-frontend:dev
+
+    container_name: ecommerce-frontend
+
+    ports:
+      - "5173:5173"
+
+    environment:
+      # The browser (not the container) calls this URL, so it is localhost.
+      VITE_API_URL: http://localhost:8080/api
+      VITE_APP_NAME: Verdant
+
+    volumes:
+      # The code, so Vite reloads on every change...
+      - ./frontend:/app
+      # ...but node_modules stays inside Docker (much faster, and it keeps
+      # the Linux packages separate from the host).
+      - frontend_node_modules:/app/node_modules
+
+    depends_on:
+      - nginx
+
   redis:
     image: redis:7-alpine
 
@@ -61,3 +88,4 @@ services:
 volumes:
   postgres_data:
   backend_vendor:
+  frontend_node_modules:

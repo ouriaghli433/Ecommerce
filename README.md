@@ -22,14 +22,31 @@ docker compose exec backend php artisan key:generate
 docker compose exec backend php artisan migrate
 ```
 
-The API answers on **http://localhost:8080/api**.
+The API answers on **http://localhost:8080/api** and the shop on
+**http://localhost:5173**.
 
 | Service | What it is | Port |
 |---|---|---|
+| `frontend` | React + Vite dev server (hot reload) | 5173 |
 | `backend` | PHP-FPM with the Laravel app | internal |
 | `nginx` | Web server in front of PHP | 8080 |
 | `database` | PostgreSQL 15 (`ecommerce`, `ecommerce_test`) | 5435 |
 | `redis` | Cache | internal |
+
+### Frontend commands
+
+```bash
+docker compose build frontend          # build the image
+docker compose up -d frontend          # start the dev server on :5173
+docker compose logs -f frontend        # watch it
+
+docker compose exec frontend npm run lint       # code style
+docker compose exec frontend npm run typecheck  # TypeScript
+docker compose exec frontend npm run build      # production build
+```
+
+The browser calls the API directly on port 8080; `VITE_API_URL` in
+`compose.yaml` (or `frontend/.env`) says where that is.
 
 The Postgres container creates the test database on its first start, with
 `infrastructure/docker/postgres/init/create-test-database.sql`.

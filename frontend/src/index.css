@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Design tokens. Tailwind reads the same values from tailwind.config.js;
+  these variables are here for the few places that need raw CSS.
+*/
+:root {
+  --color-sage: #acbdaa;
+  --color-navy: #1e2d4c;
+  --color-gray: #858585;
+  --color-beige: #cec0bb;
+  --color-cream: #f7f8f5;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-cream font-sans text-navy antialiased;
+  }
+
+  /* Everyone can see where the keyboard focus is. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-navy ring-offset-2 ring-offset-cream;
+  }
+}
