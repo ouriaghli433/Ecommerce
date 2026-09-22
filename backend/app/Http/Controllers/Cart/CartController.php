@@ -78,12 +78,9 @@ class CartController extends Controller
         return $this->cartResponse($cart);
     }
 
-    // TODO(checkout): POST /api/checkout will turn this cart into an order
-    // (status "converted", RG16), reserve stock and snapshot the address.
-
     /**
      * A customer has at most one active cart (RG13); create it when needed.
-     * TODO(concurrency): two parallel first requests could create two carts.
+     * POST /api/checkout (CheckoutService) turns this cart into an order.
      */
     private function activeCart(User $user): Cart
     {
