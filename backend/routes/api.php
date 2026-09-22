@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Address\AddressController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Cart\CartController;
 use App\Http\Controllers\Catalog\CategoryController;
 use App\Http\Controllers\Catalog\ProductController;
 use App\Http\Controllers\Inventory\InventoryController;
@@ -32,6 +33,15 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('categories', CategoryController::class)->only(['store', 'update', 'destroy']);
     Route::apiResource('products', ProductController::class)->only(['store', 'update', 'destroy']);
+
+    // The logged-in customer's cart
+    Route::get('/cart', [CartController::class, 'show']);
+    Route::delete('/cart', [CartController::class, 'clear']);
+    Route::post('/cart/lines', [CartController::class, 'addLine']);
+    Route::patch('/cart/lines/{cartLine}', [CartController::class, 'updateLine']);
+    Route::delete('/cart/lines/{cartLine}', [CartController::class, 'removeLine']);
+
+    // TODO(checkout): Route::post('/checkout', ...) turns the cart into an order.
 
     // Stock (admin only)
     Route::get('/products/{product}/inventory', [InventoryController::class, 'show']);
