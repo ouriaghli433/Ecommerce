@@ -81,10 +81,56 @@ class OrderService
     }
 
     /**
+     * Expire one order that was not paid in time (RG29).
+     *
+     * Called by ExpireOrderJob. The steps are in this exact order on purpose:
+     *
+     * 1. lock the order row, so nothing else can change it meanwhile;
+     * 2. read its status AGAIN: between the moment the job was queued and now,
+     *    a webhook may have paid it, or the customer may have cancelled it;
+     * 3. skip orders that have a payment in "processing": the money may be on
+     *    its way, and the late payment rule (RG30) will deal with the rest;
+     * 4. mark it expired and release the reserved stock;
+     * 5. AFTER the commit, ask the provider to close any open payment.
+     *
+     * Returns true when the order was really expired by this call.
+     */
+    public function expire(Order $order): bool
+    {
+        $expired = DB::transaction(function () use ($order) {
+            $order = Order::whereKey($order->id)->lockForUpdate()->firstOrFail();
+
+            if ($order->status !== 'pending_payment') {
+                return false; // already paid, cancelled or expired
+            }
+
+            if ($order->expires_at->isFuture()) {
+                return false; // still has time
+            }
+
+            if ($order->payments()->where('status', 'processing')->exists()) {
+                return false; // a payment is in flight, leave it alone
+            }
+
+            $order->update(['status' => 'expired']);
+
+            $this->releaseReservedStock($order, 'Order expired');
+
+            return true;
+        });
+
+        if ($expired) {
+            $this->payments->cancelOpenProviderPayments($order->fresh());
+        }
+
+        return $expired;
+    }
+
+    /**
      * Give back the stock held by this order. Inventory rows are locked in
      * product id order, the same order checkout uses, to avoid deadlocks.
      */
-    private function releaseReservedStock(Order $order): void
+    private function releaseReservedStock(Order $order, string $reason = 'Order cancelled'): void
     {
         $order->load('lines');
 
@@ -94,7 +140,7 @@ class OrderService
             $inventory = $inventories->get($line->product_id);
 
             if ($inventory) {
-                $this->inventory->release($inventory, $line->quantity, $order, 'Order cancelled');
+                $this->inventory->release($inventory, $line->quantity, $order, $reason);
             }
         }
     }
