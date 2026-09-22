@@ -13,3 +13,6 @@ Artisan::command('inspire', function () {
 Schedule::command('orders:expire')
     ->everyMinute()
     ->withoutOverlapping();
+
+// Keeps the idempotency_keys table small.
+Schedule::command('idempotency:prune')->daily();

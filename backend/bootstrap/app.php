@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureIdempotency;
 use App\Http\Middleware\VerifyWebhookSignature;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -16,7 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
         // Used by the webhook route: checks the provider signature.
         $middleware->alias([
+            // Checks the provider signature on the webhook route.
             'webhook.signature' => VerifyWebhookSignature::class,
+            // Makes a repeated POST with the same Idempotency-Key safe.
+            'idempotency' => EnsureIdempotency::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

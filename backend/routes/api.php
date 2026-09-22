@@ -52,8 +52,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/cart/lines/{cartLine}', [CartController::class, 'updateLine']);
     Route::delete('/cart/lines/{cartLine}', [CartController::class, 'removeLine']);
 
-    // Checkout: cart -> order (reserves stock, applies the coupon)
-    Route::post('/checkout', [CheckoutController::class, 'store']);
+    /*
+    | Money routes. They carry the "idempotency" middleware: sending the same
+    | request twice with the same Idempotency-Key header replays the first
+    | answer instead of creating a second order, payment or refund.
+    */
+    Route::middleware('idempotency')->group(function () {
+        // Checkout: cart -> order (reserves stock, applies the coupon)
+        Route::post('/checkout', [CheckoutController::class, 'store']);
+        Route::post('/orders/{order}/payments', [PaymentController::class, 'store']);
+        Route::post('/payments/{payment}/refunds', [RefundController::class, 'store']);
+    });
 
     // Orders: customers see their own, admins see all (OrderPolicy)
     Route::get('/orders', [OrderController::class, 'index']);
@@ -61,14 +70,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/orders/{order}/cancel', [OrderController::class, 'cancel']);
     Route::patch('/orders/{order}/status', [OrderController::class, 'updateStatus']);
 
-    // Payments: the customer starts one, the provider confirms it by webhook
+    // Payments: the customer starts one (route above), the provider confirms
+    // it by webhook
     Route::get('/orders/{order}/payments', [PaymentController::class, 'index']);
-    Route::post('/orders/{order}/payments', [PaymentController::class, 'store']);
     Route::get('/payments/{payment}', [PaymentController::class, 'show']);
 
-    // Refunds (admin)
+    // Refunds (admin); the create route is in the idempotency group above
     Route::get('/payments/{payment}/refunds', [RefundController::class, 'index']);
-    Route::post('/payments/{payment}/refunds', [RefundController::class, 'store']);
 
     // Coupons (admin only)
     Route::apiResource('coupons', CouponController::class);
