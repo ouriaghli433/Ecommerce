@@ -48,6 +48,24 @@ docker compose exec frontend npm run build      # production build
 The browser calls the API directly on port 8080; `VITE_API_URL` in
 `compose.yaml` (or `frontend/.env`) says where that is.
 
+### Demo data and accounts
+
+```bash
+docker compose exec backend php artisan db:seed
+```
+
+| Account | Password | Role |
+|---|---|---|
+| `admin@example.com` | `password` | admin |
+| `customer@example.com` | `password` | customer |
+
+It also creates 4 categories, 9 products with stock, and the coupon
+`WELCOME10` (10% off orders above 200.00 MAD).
+
+**Notifications need a worker.** They are written by a queued job, so run
+`docker compose exec backend php artisan queue:work` (or
+`queue:work --stop-when-empty` once) or the notifications page stays empty.
+
 The Postgres container creates the test database on its first start, with
 `infrastructure/docker/postgres/init/create-test-database.sql`.
 
@@ -255,7 +273,57 @@ database connection, to prove the row locks work.
 
 ---
 
-## 8. Troubleshooting
+## 8. The frontend
+
+React 18 + TypeScript + Vite + Tailwind, in `frontend/`.
+
+```
+src/
+  api/         one file per domain, the only place that calls the API
+  auth/        AuthProvider (token + /me) and the route guards
+  components/
+    ui/        Button, Input, Card, Modal, Table, Toast, states…
+    layout/    ShopLayout (navbar + footer) and AdminLayout (sidebar)
+    shop/      product card
+  hooks/       useCart
+  pages/       one folder per area: shop, cart, checkout, orders,
+               account, auth, admin
+  lib/         class names, money in centimes, dates, status colours
+```
+
+**Customer pages:** home, shop with search/category/pagination, product,
+cart, checkout, orders, order detail with payment, addresses,
+notifications, profile, login, register.
+
+**Admin pages** (`/admin`): dashboard, orders and order detail with status
+changes and refunds, products, stock per product, categories, coupons,
+users.
+
+**Rules the interface follows**
+
+- The backend decides. The frontend hides buttons the backend would refuse,
+  but never replaces its checks: prices, stock, roles and payment status all
+  come from the API.
+- Money is handled in centimes everywhere and only formatted for display.
+- Checkout and payments send an `Idempotency-Key`; a retry of the same
+  attempt replays the first answer instead of ordering twice.
+- After starting a payment the order page polls until the provider's webhook
+  confirms it. A payment is never "succeeded" because the browser says so.
+
+### Checking the whole flow
+
+```bash
+python scripts/flow-check.py
+```
+
+It walks register → browse → cart → address → checkout → payment →
+provider event → order paid → stock sold, plus the failure paths
+(failed payment, duplicate webhook, duplicate checkout, cancellation)
+against the running API. It needs the containers up and the demo data.
+
+---
+
+## 9. Troubleshooting
 
 **500 with "could not be opened in append mode: Permission denied"**
 Nginx/PHP-FPM run as `www-data`, but `php artisan` in the container runs as
@@ -276,7 +344,7 @@ if the database is anything else.
 
 ---
 
-## 9. Project layout
+## 10. Project layout
 
 ```
 backend/app/
