@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Catalog\CategoryController;
 use App\Http\Controllers\Catalog\ProductController;
+use App\Http\Controllers\Inventory\InventoryController;
 use App\Http\Controllers\User\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -27,4 +28,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('categories', CategoryController::class)->only(['store', 'update', 'destroy']);
     Route::apiResource('products', ProductController::class)->only(['store', 'update', 'destroy']);
+
+    // Stock (admin only)
+    Route::get('/products/{product}/inventory', [InventoryController::class, 'show']);
+    Route::get('/products/{product}/inventory/movements', [InventoryController::class, 'movements']);
+    Route::post('/products/{product}/inventory/movements', [InventoryController::class, 'storeMovement']);
 });
