@@ -1,8 +1,12 @@
-# Ecommerce Backend API
+# Verdant
 
-A Laravel 11 REST API for an online shop: catalog, cart, checkout, payments,
-refunds, webhooks and stock control. Built as a learning project, so the code
-favours clear and explicit steps over clever shortcuts.
+An online shop built end to end: a Laravel 11 API (catalogue, cart, checkout,
+payments, refunds, webhooks, stock) and a React storefront with its admin
+area. Built as a learning project, so the code favours clear and explicit
+steps over clever shortcuts.
+
+The shop is called **Verdant Maroc**. Everything it sells, and every company
+detail in the footer, is invented.
 
 Stack: PHP 8.5, Laravel 11, PostgreSQL 15, Redis 7, Nginx, Docker Compose,
 Sanctum tokens, Pint, PHPUnit.
@@ -29,6 +33,8 @@ The API answers on **http://localhost:8080/api** and the shop on
 |---|---|---|
 | `frontend` | React + Vite dev server (hot reload) | 5173 |
 | `backend` | PHP-FPM with the Laravel app | internal |
+| `worker` | Runs the queued jobs (notifications, expiration) | internal |
+| `scheduler` | Queues the expiration every minute | internal |
 | `nginx` | Web server in front of PHP | 8080 |
 | `database` | PostgreSQL 15 (`ecommerce`, `ecommerce_test`) | 5435 |
 | `redis` | Cache | internal |
@@ -82,28 +88,21 @@ stock, and the refunds are real. The mix is fixed, so you always get orders
 to pay, a refused payment, cancellations, expired orders, and two late
 payments with their automatic `late_payment` refund (RG30).
 
-**Notifications need a worker.** They are written by a queued job, so run
-`docker compose exec backend php artisan queue:work` (or
-`queue:work --stop-when-empty` once) or the notifications page stays empty.
+Notifications are written by a queued job, which the `worker` service runs
+for you.
 
 The Postgres container creates the test database on its first start, with
 `infrastructure/docker/postgres/init/create-test-database.sql`.
 
-### Background workers
+### Background work
 
-Two processes are needed for the full behaviour. Run them in their own
-terminals (or add them as services in `compose.yaml`):
+The `worker` and `scheduler` services start with the stack, so notifications
+appear and unpaid orders expire on their own. To watch them:
 
 ```bash
-# Runs the queued jobs: notifications, order expiration
-docker compose exec backend php artisan queue:work
-
-# Runs the scheduler: queues expiration every minute, prunes old keys daily
-docker compose exec backend php artisan schedule:work
+docker compose logs -f worker
+docker compose logs -f scheduler
 ```
-
-Without a worker, the API still works: the jobs simply wait in the `jobs`
-table. Without the scheduler, unpaid orders are never expired.
 
 ---
 
@@ -315,9 +314,9 @@ src/
 cart, checkout, orders, order detail with payment, addresses,
 notifications, profile, login, register.
 
-**Admin pages** (`/admin`): dashboard, orders and order detail with status
-changes and refunds, products, stock per product, categories, coupons,
-users.
+**Admin pages** (`/admin`): dashboard, orders and order detail with a status
+timeline, refunds, products with their pictures, stock per product,
+categories, coupons and users.
 
 **Rules the interface follows**
 
