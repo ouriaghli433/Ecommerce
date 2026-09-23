@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { listCategories, listProducts } from '@/api/catalog'
 import { getErrorMessage } from '@/api/client'
 import { ProductCard } from '@/components/shop/ProductCard'
+import { ProductThumb } from '@/components/shop/ProductThumb'
 import { Button } from '@/components/ui/Button'
 import { ErrorState, SkeletonGrid } from '@/components/ui/States'
 import { formatMoney } from '@/lib/utils'
@@ -55,10 +56,12 @@ export function HomePage() {
               to={`/products/${highlight.id}`}
               className="mx-auto w-full max-w-sm rounded-card bg-white p-6 shadow-card transition hover:-translate-y-1"
             >
-              <div className="flex aspect-square items-center justify-center rounded-2xl bg-beige-soft">
-                <span className="font-display text-5xl font-semibold text-navy/60">
-                  {highlight.name.slice(0, 2).toUpperCase()}
-                </span>
+              <div className="aspect-square overflow-hidden rounded-2xl bg-beige-soft">
+                <ProductThumb
+                  name={highlight.name}
+                  url={highlight.primary_image_url}
+                  textClassName="text-5xl"
+                />
               </div>
               <div className="mt-4 space-y-1">
                 <p className="text-xs uppercase tracking-wide text-muted">

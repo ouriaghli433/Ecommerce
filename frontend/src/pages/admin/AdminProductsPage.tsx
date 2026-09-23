@@ -11,6 +11,7 @@ import {
 } from '@/api/catalog'
 import { getErrorMessage, parseApiError } from '@/api/client'
 import type { Product } from '@/api/types'
+import { ProductThumb } from '@/components/shop/ProductThumb'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card, CardBody } from '@/components/ui/Card'
@@ -190,7 +191,18 @@ export function AdminProductsPage() {
               <tbody>
                 {productsQuery.data.data.map((product) => (
                   <tr key={product.id}>
-                    <Td className="font-medium">{product.name}</Td>
+                    <Td className="font-medium">
+                      <span className="flex items-center gap-3">
+                        <span className="h-10 w-10 flex-none overflow-hidden rounded-xl bg-sage-soft">
+                          <ProductThumb
+                            name={product.name}
+                            url={product.primary_image_url}
+                            textClassName="text-xs"
+                          />
+                        </span>
+                        {product.name}
+                      </span>
+                    </Td>
                     <Td className="text-muted">{product.sku}</Td>
                     <Td className="text-muted">{product.category?.name ?? '—'}</Td>
                     <Td>{formatMoney(product.price)}</Td>

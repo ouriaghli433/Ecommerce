@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getErrorMessage } from '@/api/client'
 import { useCart, useCartMutations } from '@/hooks/useCart'
+import { ProductThumb } from '@/components/shop/ProductThumb'
 import { Button } from '@/components/ui/Button'
 import { Card, CardBody } from '@/components/ui/Card'
 import { ConfirmDialog } from '@/components/ui/Modal'
@@ -95,10 +96,12 @@ export function CartPage() {
           {cart.lines.map((line) => (
             <Card key={line.id}>
               <CardBody className="flex flex-wrap items-center gap-4">
-                <div className="flex h-20 w-20 flex-none items-center justify-center rounded-2xl bg-sage-soft">
-                  <span className="font-display text-lg font-semibold text-navy/70">
-                    {(line.product?.name ?? '?').slice(0, 2).toUpperCase()}
-                  </span>
+                <div className="h-20 w-20 flex-none overflow-hidden rounded-2xl bg-sage-soft">
+                  <ProductThumb
+                    name={line.product?.name ?? '?'}
+                    url={line.product?.primary_image_url}
+                    textClassName="text-lg"
+                  />
                 </div>
 
                 <div className="min-w-[140px] flex-1">

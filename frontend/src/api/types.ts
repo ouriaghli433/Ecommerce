@@ -50,6 +50,14 @@ export interface Category {
   children?: Category[]
 }
 
+export interface ProductImage {
+  id: string
+  url: string
+  alt_text: string | null
+  display_order: number
+  is_primary: boolean
+}
+
 export interface Product {
   id: string
   name: string
@@ -63,6 +71,10 @@ export interface Product {
   category?: Category
   /** Only sent on the product page; the listing has no stock on purpose. */
   available_stock?: number
+  /** Sent by the listing and the cart: one picture is enough there. */
+  primary_image_url?: string | null
+  /** Only on the product page: the whole gallery, in display order. */
+  images?: ProductImage[]
 }
 
 export interface CartLine {

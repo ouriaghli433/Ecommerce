@@ -10,7 +10,8 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardBody } from '@/components/ui/Card'
 import { ErrorState, Skeleton } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
-import { formatMoney } from '@/lib/utils'
+import { ProductThumb } from '@/components/shop/ProductThumb'
+import { cn, formatMoney } from '@/lib/utils'
 
 export function ProductDetailPage() {
   const { productId = '' } = useParams()
@@ -20,6 +21,7 @@ export function ProductDetailPage() {
   const { addLine } = useCartMutations()
 
   const [quantity, setQuantity] = useState(1)
+  const [selectedImage, setSelectedImage] = useState(0)
 
   const productQuery = useQuery({
     queryKey: ['product', productId],
@@ -68,6 +70,7 @@ export function ProductDetailPage() {
   const product = productQuery.data
   const stock = product.available_stock ?? 0
   const outOfStock = stock <= 0
+  const gallery = product.images ?? []
 
   return (
     <div className="space-y-8">
@@ -76,10 +79,41 @@ export function ProductDetailPage() {
       </Link>
 
       <div className="grid gap-8 lg:grid-cols-2">
-        <div className="flex aspect-square items-center justify-center rounded-card bg-sage-soft">
-          <span className="font-display text-6xl font-semibold text-navy/60">
-            {product.name.slice(0, 2).toUpperCase()}
-          </span>
+        {/* Gallery: one big picture, the others below it */}
+        <div className="space-y-3">
+          <div className="aspect-square overflow-hidden rounded-card bg-sage-soft">
+            <ProductThumb
+              name={product.name}
+              url={gallery[selectedImage]?.url ?? product.primary_image_url}
+              alt={gallery[selectedImage]?.alt_text}
+              textClassName="text-6xl"
+            />
+          </div>
+
+          {gallery.length > 1 && (
+            <div className="flex gap-3">
+              {gallery.map((image, index) => (
+                <button
+                  key={image.id}
+                  type="button"
+                  onClick={() => setSelectedImage(index)}
+                  aria-label={`Picture ${index + 1}`}
+                  aria-current={index === selectedImage}
+                  className={cn(
+                    'h-20 w-20 overflow-hidden rounded-2xl border-2 transition',
+                    index === selectedImage ? 'border-navy' : 'border-transparent opacity-70',
+                  )}
+                >
+                  <ProductThumb
+                    name={product.name}
+                    url={image.url}
+                    alt={image.alt_text}
+                    textClassName="text-base"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="space-y-5">
