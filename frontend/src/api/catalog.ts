@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Category, Paginated, Product, Single } from './types'
+import type { Category, Paginated, Product, ProductImage, Single } from './types'
 
 export interface ProductFilters {
   search?: string
@@ -91,4 +91,41 @@ export async function updateProduct(
 
 export async function deleteProduct(id: string): Promise<void> {
   await api.delete(`/products/${id}`)
+}
+
+/* ---------- product pictures (admin) ---------- */
+
+export async function listProductImages(productId: string): Promise<ProductImage[]> {
+  const { data } = await api.get<{ data: ProductImage[] }>(`/products/${productId}/images`)
+
+  return data.data
+}
+
+/**
+ * Adds a picture from its address. The first picture of a product becomes
+ * the main one by itself, which is what the lists show.
+ */
+export async function addProductImage(
+  productId: string,
+  payload: { url: string; alt_text?: string; is_primary?: boolean },
+): Promise<ProductImage> {
+  const { data } = await api.post<Single<ProductImage>>(`/products/${productId}/images`, payload)
+
+  return data.data
+}
+
+export async function setPrimaryProductImage(
+  productId: string,
+  imageId: string,
+): Promise<ProductImage> {
+  const { data } = await api.patch<Single<ProductImage>>(
+    `/products/${productId}/images/${imageId}`,
+    { is_primary: true },
+  )
+
+  return data.data
+}
+
+export async function deleteProductImage(productId: string, imageId: string): Promise<void> {
+  await api.delete(`/products/${productId}/images/${imageId}`)
 }

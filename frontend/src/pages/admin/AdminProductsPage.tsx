@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  addProductImage,
   createProduct,
   deleteProduct,
   listCategories,
@@ -13,6 +14,7 @@ import { getErrorMessage, parseApiError } from '@/api/client'
 import type { Product } from '@/api/types'
 import { ProductThumb } from '@/components/shop/ProductThumb'
 import { AdminCard, AdminPageHeader } from '@/components/admin/AdminPage'
+import { ProductImagesModal } from '@/components/admin/ProductImagesModal'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -34,6 +36,8 @@ interface FormState {
   category_id: string
   description: string
   is_active: boolean
+  /** Optional first picture, added right after the product is created. */
+  image_url: string
 }
 
 const emptyForm: FormState = {
@@ -44,6 +48,7 @@ const emptyForm: FormState = {
   category_id: '',
   description: '',
   is_active: true,
+  image_url: '',
 }
 
 function slugify(value: string): string {
@@ -64,6 +69,7 @@ export function AdminProductsPage() {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [toDelete, setToDelete] = useState<Product | null>(null)
+  const [imagesFor, setImagesFor] = useState<Product | null>(null)
 
   // Admins see inactive products too: the API checks the token.
   const productsQuery = useQuery({
@@ -80,8 +86,25 @@ export function AdminProductsPage() {
     ])
 
   const saveMutation = useMutation({
-    mutationFn: (payload: ProductPayload) =>
-      editing ? updateProduct(editing.id, payload) : createProduct(payload),
+    mutationFn: async (payload: ProductPayload) => {
+      if (editing) {
+        return updateProduct(editing.id, payload)
+      }
+
+      const created = await createProduct(payload)
+
+      // A picture can only be attached once the product exists, so it is
+      // added right after. A wrong address does not lose the product.
+      if (form.image_url.trim()) {
+        try {
+          await addProductImage(created.id, { url: form.image_url.trim() })
+        } catch {
+          toast.error('The product was created, but its picture address was refused.')
+        }
+      }
+
+      return created
+    },
     onSuccess: async () => {
       await refresh()
       setFormOpen(false)
@@ -127,6 +150,7 @@ export function AdminProductsPage() {
       category_id: product.category_id,
       description: product.description ?? '',
       is_active: product.is_active,
+      image_url: '',
     })
     setErrors({})
     setFormOpen(true)
@@ -209,6 +233,9 @@ export function AdminProductsPage() {
                       </Badge>
                     </Td>
                     <Td className="space-x-1 text-right">
+                      <Button size="sm" variant="ghost" onClick={() => setImagesFor(product)}>
+                        Pictures
+                      </Button>
                       <Link to={`/admin/products/${product.id}/inventory`}>
                         <Button size="sm" variant="ghost">
                           Stock
@@ -321,6 +348,22 @@ export function AdminProductsPage() {
             error={errors.description}
           />
 
+          {editing ? (
+            <p className="rounded-2xl bg-cream px-4 py-3 text-xs text-muted">
+              Pictures are managed from the “Pictures” button in the list.
+            </p>
+          ) : (
+            <Input
+              label="First picture (optional)"
+              placeholder="https://…/photo.jpg"
+              value={form.image_url}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, image_url: event.target.value }))
+              }
+              hint="It becomes the main picture. More can be added afterwards."
+            />
+          )}
+
           <label className="flex items-center gap-3 text-sm text-navy">
             <input
               type="checkbox"
@@ -333,6 +376,12 @@ export function AdminProductsPage() {
           </label>
         </form>
       </Modal>
+
+      <ProductImagesModal
+        product={imagesFor}
+        open={imagesFor !== null}
+        onClose={() => setImagesFor(null)}
+      />
 
       <ConfirmDialog
         open={toDelete !== null}
