@@ -11,6 +11,8 @@ services:
 
     working_dir: /var/www/html
     environment:
+      # Used to build the address of uploaded pictures (/storage/...).
+      APP_URL: http://localhost:8080
       DB_CONNECTION: pgsql
       DB_HOST: database
       DB_PORT: 5432
