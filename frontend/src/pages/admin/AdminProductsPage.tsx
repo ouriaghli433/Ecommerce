@@ -36,8 +36,6 @@ interface FormState {
   category_id: string
   description: string
   is_active: boolean
-  /** Optional first picture, added right after the product is created. */
-  image_url: string
 }
 
 const emptyForm: FormState = {
@@ -48,7 +46,6 @@ const emptyForm: FormState = {
   category_id: '',
   description: '',
   is_active: true,
-  image_url: '',
 }
 
 function slugify(value: string): string {
@@ -70,6 +67,7 @@ export function AdminProductsPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [toDelete, setToDelete] = useState<Product | null>(null)
   const [imagesFor, setImagesFor] = useState<Product | null>(null)
+  const [firstPicture, setFirstPicture] = useState<File | null>(null)
 
   // Admins see inactive products too: the API checks the token.
   const productsQuery = useQuery({
@@ -94,12 +92,12 @@ export function AdminProductsPage() {
       const created = await createProduct(payload)
 
       // A picture can only be attached once the product exists, so it is
-      // added right after. A wrong address does not lose the product.
-      if (form.image_url.trim()) {
+      // sent right after. A refused file does not lose the product.
+      if (firstPicture) {
         try {
-          await addProductImage(created.id, { url: form.image_url.trim() })
+          await addProductImage(created.id, { file: firstPicture })
         } catch {
-          toast.error('The product was created, but its picture address was refused.')
+          toast.error('The product was created, but its picture was refused.')
         }
       }
 
@@ -136,12 +134,14 @@ export function AdminProductsPage() {
   function openCreate() {
     setEditing(null)
     setForm({ ...emptyForm, category_id: categoriesQuery.data?.[0]?.id ?? '' })
+    setFirstPicture(null)
     setErrors({})
     setFormOpen(true)
   }
 
   function openEdit(product: Product) {
     setEditing(product)
+    setFirstPicture(null)
     setForm({
       name: product.name,
       slug: product.slug,
@@ -150,7 +150,6 @@ export function AdminProductsPage() {
       category_id: product.category_id,
       description: product.description ?? '',
       is_active: product.is_active,
-      image_url: '',
     })
     setErrors({})
     setFormOpen(true)
@@ -353,15 +352,25 @@ export function AdminProductsPage() {
               Pictures are managed from the “Pictures” button in the list.
             </p>
           ) : (
-            <Input
-              label="First picture (optional)"
-              placeholder="https://…/photo.jpg"
-              value={form.image_url}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, image_url: event.target.value }))
-              }
-              hint="It becomes the main picture. More can be added afterwards."
-            />
+            <div className="space-y-1.5">
+              <label htmlFor="first-picture" className="text-sm font-medium text-navy">
+                First picture (optional)
+              </label>
+
+              <input
+                id="first-picture"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/avif"
+                onChange={(event) => setFirstPicture(event.target.files?.[0] ?? null)}
+                className="w-full rounded-2xl border border-beige bg-white px-4 py-2.5 text-sm text-navy file:mr-3 file:rounded-pill file:border-0 file:bg-navy file:px-4 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-navy-light"
+              />
+
+              <p className="text-xs text-muted">
+                Taken from your computer. It becomes the main picture; more can be added from
+                the “Pictures” button.
+                {firstPicture ? ` · ${firstPicture.name}` : ''}
+              </p>
+            </div>
           )}
 
           <label className="flex items-center gap-3 text-sm text-navy">

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   addProductImage,
@@ -16,10 +16,11 @@ import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { Skeleton } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
+import { cn } from '@/lib/utils'
 
 /**
- * The gallery of one product: add a picture from its address, choose the
- * main one, remove the others.
+ * The gallery of one product: add a picture from the computer or from an
+ * address, choose the main one, remove the others.
  *
  * The rules live in the backend: the first picture becomes the main one,
  * and deleting the main one promotes the next.
@@ -35,7 +36,10 @@ export function ProductImagesModal({
 }) {
   const toast = useToast()
   const queryClient = useQueryClient()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const [source, setSource] = useState<'file' | 'url'>('file')
+  const [file, setFile] = useState<File | null>(null)
   const [url, setUrl] = useState('')
   const [altText, setAltText] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -56,12 +60,25 @@ export function ProductImagesModal({
       queryClient.invalidateQueries({ queryKey: ['product', productId] }),
     ])
 
+  function resetForm() {
+    setFile(null)
+    setUrl('')
+    setAltText('')
+    setErrors({})
+
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   const addMutation = useMutation({
-    mutationFn: () => addProductImage(productId, { url, alt_text: altText || undefined }),
+    mutationFn: () =>
+      addProductImage(productId, {
+        file: source === 'file' ? (file ?? undefined) : undefined,
+        url: source === 'url' ? url : undefined,
+        alt_text: altText || undefined,
+      }),
     onSuccess: async () => {
       await refresh()
-      setUrl('')
-      setAltText('')
+      resetForm()
       toast.success('Picture added.')
     },
     onError: (error) => {
@@ -93,6 +110,13 @@ export function ProductImagesModal({
   function onAdd(event: FormEvent) {
     event.preventDefault()
     setErrors({})
+
+    if (source === 'file' && !file) {
+      setErrors({ file: 'Choose a picture from your computer.' })
+
+      return
+    }
+
     addMutation.mutate()
   }
 
@@ -102,8 +126,20 @@ export function ProductImagesModal({
     <Modal
       open={open}
       title={product ? `Pictures — ${product.name}` : 'Pictures'}
-      onClose={onClose}
-      footer={<Button onClick={onClose}>Done</Button>}
+      onClose={() => {
+        resetForm()
+        onClose()
+      }}
+      footer={
+        <Button
+          onClick={() => {
+            resetForm()
+            onClose()
+          }}
+        >
+          Done
+        </Button>
+      }
     >
       <div className="space-y-5">
         {imagesQuery.isPending && <Skeleton className="h-24 w-full" />}
@@ -158,16 +194,68 @@ export function ProductImagesModal({
           </ul>
         )}
 
-        <form onSubmit={onAdd} className="space-y-3 border-t border-beige/60 pt-4" noValidate>
-          <Input
-            label="Picture address"
-            placeholder="https://…/photo.jpg"
-            value={url}
-            onChange={(event) => setUrl(event.target.value)}
-            error={errors.url}
-            hint="A full link to the image file."
-            required
-          />
+        <form onSubmit={onAdd} className="space-y-4 border-t border-beige/60 pt-4" noValidate>
+          {/* Where the picture comes from */}
+          <div className="flex gap-2">
+            {[
+              { value: 'file', label: 'From my computer' },
+              { value: 'url', label: 'From a link' },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => {
+                  setSource(option.value as 'file' | 'url')
+                  setErrors({})
+                }}
+                className={cn(
+                  'rounded-pill px-4 py-2 text-sm transition',
+                  source === option.value
+                    ? 'bg-navy text-white'
+                    : 'bg-cream text-muted hover:text-navy',
+                )}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+
+          {source === 'file' ? (
+            <div className="space-y-1.5">
+              <label htmlFor="picture-file" className="text-sm font-medium text-navy">
+                Picture file
+              </label>
+
+              <input
+                id="picture-file"
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/avif"
+                onChange={(event) => {
+                  setFile(event.target.files?.[0] ?? null)
+                  setErrors({})
+                }}
+                className="w-full rounded-2xl border border-beige bg-white px-4 py-2.5 text-sm text-navy file:mr-3 file:rounded-pill file:border-0 file:bg-navy file:px-4 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-navy-light"
+              />
+
+              {errors.file ? (
+                <p className="text-xs text-red-600">{errors.file}</p>
+              ) : (
+                <p className="text-xs text-muted">
+                  JPG, PNG, WEBP or AVIF · up to 4 MB{file ? ` · ${file.name}` : ''}
+                </p>
+              )}
+            </div>
+          ) : (
+            <Input
+              label="Picture address"
+              placeholder="https://…/photo.jpg"
+              value={url}
+              onChange={(event) => setUrl(event.target.value)}
+              error={errors.url}
+              hint="A full link to an image file."
+            />
+          )}
 
           <Input
             label="Description for screen readers (optional)"

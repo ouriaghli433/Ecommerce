@@ -102,14 +102,36 @@ export async function listProductImages(productId: string): Promise<ProductImage
 }
 
 /**
- * Adds a picture from its address. The first picture of a product becomes
- * the main one by itself, which is what the lists show.
+ * Adds a picture, either chosen from the computer or taken from an address.
+ * The first picture of a product becomes the main one by itself, which is
+ * what the lists show.
  */
 export async function addProductImage(
   productId: string,
-  payload: { url: string; alt_text?: string; is_primary?: boolean },
+  payload: { file?: File; url?: string; alt_text?: string; is_primary?: boolean },
 ): Promise<ProductImage> {
-  const { data } = await api.post<Single<ProductImage>>(`/products/${productId}/images`, payload)
+  if (payload.file) {
+    // A file cannot travel as JSON: it goes as form data, and the browser
+    // sets the right content type by itself.
+    const form = new FormData()
+
+    form.append('file', payload.file)
+    if (payload.alt_text) form.append('alt_text', payload.alt_text)
+    if (payload.is_primary) form.append('is_primary', '1')
+
+    const { data } = await api.post<Single<ProductImage>>(
+      `/products/${productId}/images`,
+      form,
+    )
+
+    return data.data
+  }
+
+  const { data } = await api.post<Single<ProductImage>>(`/products/${productId}/images`, {
+    url: payload.url,
+    alt_text: payload.alt_text,
+    is_primary: payload.is_primary,
+  })
 
   return data.data
 }
