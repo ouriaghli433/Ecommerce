@@ -130,7 +130,7 @@ class CartController extends Controller
 
     private function cartResponse(Cart $cart): JsonResponse
     {
-        $cart->load('lines.product');
+        $cart->load(['lines.product.primaryImage']);
 
         // Always 200: Laravel would answer 201 when the cart was just created.
         return (new CartResource($cart))->response()->setStatusCode(200);

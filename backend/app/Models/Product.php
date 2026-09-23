@@ -43,6 +43,18 @@ class Product extends Model
         return $this->hasOne(Inventory::class);
     }
 
+    /** The gallery, in the order chosen by the shop. */
+    public function images(): HasMany
+    {
+        return $this->hasMany(ProductImage::class)->orderBy('display_order');
+    }
+
+    /** The one picture used in listings and cards. */
+    public function primaryImage(): HasOne
+    {
+        return $this->hasOne(ProductImage::class)->where('is_primary', true);
+    }
+
     public function inventoryMovements(): HasMany
     {
         return $this->hasMany(InventoryMovement::class);

@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             CategorySeeder::class,
             ProductSeeder::class,
+            ProductImageSeeder::class,
             CouponSeeder::class,
             AddressSeeder::class,
             OrderSeeder::class,   // uses the real checkout and payment services

@@ -35,7 +35,7 @@ class ProductController extends Controller
         // so a cached page can never show an old available_stock. The product
         // page (show) reads the stock live from the database.
         $payload = $cache->remember('products', $parts, function () use ($request, $isAdmin) {
-            $query = Product::with('category')->latest();
+            $query = Product::with(['category', 'primaryImage'])->latest();
 
             // Customers and guests only see active products (RG5).
             if (! $isAdmin) {
@@ -62,7 +62,7 @@ class ProductController extends Controller
             abort(404);
         }
 
-        $product->load(['category', 'inventory']);
+        $product->load(['category', 'inventory', 'images', 'primaryImage']);
 
         return new ProductResource($product);
     }
@@ -78,7 +78,7 @@ class ProductController extends Controller
             return $product;
         });
 
-        $product->load(['category', 'inventory']);
+        $product->load(['category', 'inventory', 'images', 'primaryImage']);
 
         $cache->flush();
 
@@ -89,7 +89,7 @@ class ProductController extends Controller
     {
         $product->update($request->validated());
 
-        $product->load(['category', 'inventory']);
+        $product->load(['category', 'inventory', 'images', 'primaryImage']);
 
         // Price, name or visibility may have changed: drop the cached lists.
         $cache->flush();

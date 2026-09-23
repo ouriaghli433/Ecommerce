@@ -20,6 +20,11 @@ class ProductResource extends JsonResource
             'attributes' => $this->attributes,
             'category_id' => $this->category_id,
             'category' => new CategoryResource($this->whenLoaded('category')),
+
+            // The listing loads only the main picture; the product page loads
+            // the whole gallery.
+            'primary_image_url' => $this->whenLoaded('primaryImage', fn () => $this->primaryImage?->url),
+            'images' => ProductImageResource::collection($this->whenLoaded('images')),
             'available_stock' => $this->whenLoaded('inventory', fn () => $this->inventory?->availableStock()),
         ];
     }
