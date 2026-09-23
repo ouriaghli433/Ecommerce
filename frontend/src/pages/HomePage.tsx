@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { listCategories, listProducts } from '@/api/catalog'
+import { listProducts } from '@/api/catalog'
+import { useCategoryTree } from '@/hooks/useCategories'
 import { getErrorMessage } from '@/api/client'
 import { ProductCard } from '@/components/shop/ProductCard'
 import { ProductThumb } from '@/components/shop/ProductThumb'
@@ -15,7 +16,7 @@ export function HomePage() {
     queryFn: () => listProducts({ page: 1 }),
   })
 
-  const categoriesQuery = useQuery({ queryKey: ['categories'], queryFn: listCategories })
+  const { tree } = useCategoryTree()
 
   const featured = productsQuery.data?.data.slice(0, 4) ?? []
   const highlight = productsQuery.data?.data[0]
@@ -77,8 +78,8 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Categories */}
-      {categoriesQuery.data && categoriesQuery.data.length > 0 && (
+      {/* Categories, with their sub-categories */}
+      {tree.length > 0 && (
         <section className="space-y-4">
           <div className="flex items-end justify-between gap-4">
             <h2 className="font-display text-2xl font-semibold text-navy">Browse by category</h2>
@@ -87,16 +88,29 @@ export function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {categoriesQuery.data.slice(0, 4).map((category) => (
-              <Link
-                key={category.id}
-                to={`/products?category_id=${category.id}`}
-                className="rounded-card bg-white p-6 text-center shadow-soft transition hover:shadow-card"
-              >
-                <div className="mx-auto mb-3 h-12 w-12 rounded-full bg-sage-soft" />
-                <p className="font-medium text-navy">{category.name}</p>
-              </Link>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {tree.map((parent) => (
+              <div key={parent.id} className="rounded-card bg-white p-6 shadow-soft">
+                <Link
+                  to={`/products?category_id=${parent.id}`}
+                  className="font-display text-lg font-semibold text-navy hover:underline"
+                >
+                  {parent.name}
+                </Link>
+
+                <ul className="mt-3 space-y-1">
+                  {parent.children.map((child) => (
+                    <li key={child.id}>
+                      <Link
+                        to={`/products?category_id=${child.id}`}
+                        className="text-sm text-muted transition hover:text-navy"
+                      >
+                        {child.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
           </div>
         </section>

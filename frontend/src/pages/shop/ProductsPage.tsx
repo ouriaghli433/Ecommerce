@@ -2,7 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { getErrorMessage } from '@/api/client'
-import { listCategories, listProducts } from '@/api/catalog'
+import { listProducts } from '@/api/catalog'
+import { useCategoryTree } from '@/hooks/useCategories'
 import { ProductCard } from '@/components/shop/ProductCard'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -23,7 +24,9 @@ export function ProductsPage() {
 
   const [searchInput, setSearchInput] = useState(search)
 
-  const categoriesQuery = useQuery({ queryKey: ['categories'], queryFn: listCategories })
+  // Products live in the sub-categories, so the filter shows those.
+  const { leaves, all } = useCategoryTree()
+  const activeCategory = all.find((category) => category.id === categoryId)
 
   const productsQuery = useQuery({
     queryKey: ['products', { search, categoryId, page }],
@@ -57,11 +60,14 @@ export function ProductsPage() {
   return (
     <div className="space-y-6">
       <header className="space-y-2">
-        <h1 className="font-display text-3xl font-semibold text-navy">Shop</h1>
+        <h1 className="font-display text-3xl font-semibold text-navy">
+          {activeCategory?.name ?? 'Shop'}
+        </h1>
         <p className="text-sm text-muted">
           {productsQuery.data
             ? `${productsQuery.data.meta.total} product(s)`
             : 'Loading the catalogue…'}
+          {search && ` for “${search}”`}
         </p>
       </header>
 
@@ -106,7 +112,7 @@ export function ProductsPage() {
           All
         </button>
 
-        {categoriesQuery.data?.map((category) => (
+        {leaves.map((category) => (
           <button
             key={category.id}
             type="button"
