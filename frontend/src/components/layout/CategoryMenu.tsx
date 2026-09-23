@@ -1,26 +1,33 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useCategoryTree } from '@/hooks/useCategories'
+import { Link, useSearchParams } from 'react-router-dom'
+import { useCategoryTree, type CategoryNode } from '@/hooks/useCategories'
 import { cn } from '@/lib/utils'
 
 /**
- * The "Shop" menu of the navbar: main categories with their
- * sub-categories. Opens on click, closes on Escape or a click outside.
+ * The main categories, shown one by one in the navbar:
+ *
+ *   Electronics ▾   Audio ▾   Accessories ▾   Home ▾
+ *
+ * Clicking a name opens its sub-categories; clicking "All …" inside goes
+ * to the whole category. Only one menu is open at a time.
  */
-export function CategoryMenu() {
+export function CategoryNav() {
   const { tree } = useCategoryTree()
-  const [open, setOpen] = useState(false)
+  const [openId, setOpenId] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const [searchParams] = useSearchParams()
+
+  const activeCategoryId = searchParams.get('category_id')
 
   useEffect(() => {
-    if (!open) return
+    if (!openId) return
 
     function onClickOutside(event: MouseEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) setOpen(false)
+      if (!containerRef.current?.contains(event.target as Node)) setOpenId(null)
     }
 
     function onEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpen(false)
+      if (event.key === 'Escape') setOpenId(null)
     }
 
     document.addEventListener('mousedown', onClickOutside)
@@ -30,65 +37,74 @@ export function CategoryMenu() {
       document.removeEventListener('mousedown', onClickOutside)
       document.removeEventListener('keydown', onEscape)
     }
-  }, [open])
+  }, [openId])
+
+  /** True when the page currently shows this category or one of its children. */
+  function isActive(parent: CategoryNode): boolean {
+    if (!activeCategoryId) return false
+
+    return (
+      parent.id === activeCategoryId ||
+      parent.children.some((child) => child.id === activeCategoryId)
+    )
+  }
 
   return (
-    <div ref={containerRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        aria-expanded={open}
-        aria-haspopup="true"
-        className={cn(
-          'flex items-center gap-1.5 rounded-pill px-4 py-2 text-sm font-medium transition',
-          open ? 'bg-sage-soft text-navy' : 'text-muted hover:text-navy',
-        )}
-      >
-        Shop
-        <span aria-hidden="true" className={cn('text-xs transition', open && 'rotate-180')}>
-          ▾
-        </span>
-      </button>
-
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-2 w-[min(90vw,44rem)] rounded-card bg-white p-6 shadow-card">
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {tree.map((parent) => (
-              <div key={parent.id} className="space-y-2">
-                <Link
-                  to={`/products?category_id=${parent.id}`}
-                  onClick={() => setOpen(false)}
-                  className="block font-display text-sm font-semibold text-navy hover:underline"
-                >
-                  {parent.name}
-                </Link>
-
-                <ul className="space-y-1">
-                  {parent.children.map((child) => (
-                    <li key={child.id}>
-                      <Link
-                        to={`/products?category_id=${child.id}`}
-                        onClick={() => setOpen(false)}
-                        className="block text-sm text-muted transition hover:text-navy"
-                      >
-                        {child.name}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-
-          <Link
-            to="/products"
-            onClick={() => setOpen(false)}
-            className="mt-6 block border-t border-beige/60 pt-4 text-sm font-medium text-navy hover:underline"
+    <div ref={containerRef} className="flex items-center gap-0.5">
+      {tree.map((parent) => (
+        <div key={parent.id} className="relative">
+          <button
+            type="button"
+            onClick={() => setOpenId(openId === parent.id ? null : parent.id)}
+            aria-expanded={openId === parent.id}
+            aria-haspopup="true"
+            className={cn(
+              'flex items-center gap-1 rounded-pill px-3 py-2 text-sm font-medium transition lg:px-4',
+              isActive(parent) || openId === parent.id
+                ? 'bg-sage-soft text-navy'
+                : 'text-muted hover:text-navy',
+            )}
           >
-            See the whole catalogue →
-          </Link>
+            {parent.name}
+            {parent.children.length > 0 && (
+              <span
+                aria-hidden="true"
+                className={cn('text-[0.6rem] transition', openId === parent.id && 'rotate-180')}
+              >
+                ▾
+              </span>
+            )}
+          </button>
+
+          {openId === parent.id && (
+            <div className="absolute left-0 top-full z-50 mt-2 w-56 rounded-card bg-white p-2 shadow-card">
+              <Link
+                to={`/products?category_id=${parent.id}`}
+                onClick={() => setOpenId(null)}
+                className="block rounded-2xl px-4 py-2 text-sm font-medium text-navy hover:bg-sage-soft"
+              >
+                All {parent.name.toLowerCase()}
+              </Link>
+
+              <div className="my-1 border-t border-beige/60" />
+
+              {parent.children.map((child) => (
+                <Link
+                  key={child.id}
+                  to={`/products?category_id=${child.id}`}
+                  onClick={() => setOpenId(null)}
+                  className={cn(
+                    'block rounded-2xl px-4 py-2 text-sm transition hover:bg-sage-soft hover:text-navy',
+                    child.id === activeCategoryId ? 'text-navy' : 'text-muted',
+                  )}
+                >
+                  {child.name}
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      ))}
     </div>
   )
 }
