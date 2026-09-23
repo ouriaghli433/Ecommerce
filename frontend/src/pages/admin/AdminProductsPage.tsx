@@ -2,7 +2,6 @@ import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  addProductImage,
   createProduct,
   deleteProduct,
   listCategories,
@@ -15,6 +14,7 @@ import type { Product } from '@/api/types'
 import { ProductThumb } from '@/components/shop/ProductThumb'
 import { AdminCard, AdminPageHeader } from '@/components/admin/AdminPage'
 import { ProductImagesModal } from '@/components/admin/ProductImagesModal'
+import { useImageUpload } from '@/hooks/useImageUpload'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -59,6 +59,7 @@ function slugify(value: string): string {
 export function AdminProductsPage() {
   const toast = useToast()
   const queryClient = useQueryClient()
+  const { uploadAll, progress: uploadProgress } = useImageUpload()
 
   const [page, setPage] = useState(1)
   const [formOpen, setFormOpen] = useState(false)
@@ -67,7 +68,7 @@ export function AdminProductsPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [toDelete, setToDelete] = useState<Product | null>(null)
   const [imagesFor, setImagesFor] = useState<Product | null>(null)
-  const [firstPicture, setFirstPicture] = useState<File | null>(null)
+  const [firstPictures, setFirstPictures] = useState<File[]>([])
 
   // Admins see inactive products too: the API checks the token.
   const productsQuery = useQuery({
@@ -93,11 +94,11 @@ export function AdminProductsPage() {
 
       // A picture can only be attached once the product exists, so it is
       // sent right after. A refused file does not lose the product.
-      if (firstPicture) {
-        try {
-          await addProductImage(created.id, { file: firstPicture })
-        } catch {
-          toast.error('The product was created, but its picture was refused.')
+      if (firstPictures.length > 0) {
+        const result = await uploadAll(created.id, firstPictures)
+
+        for (const message of result.errors) {
+          toast.error(`The product was created, but one picture was refused - ${message}`)
         }
       }
 
@@ -134,14 +135,14 @@ export function AdminProductsPage() {
   function openCreate() {
     setEditing(null)
     setForm({ ...emptyForm, category_id: categoriesQuery.data?.[0]?.id ?? '' })
-    setFirstPicture(null)
+    setFirstPictures([])
     setErrors({})
     setFormOpen(true)
   }
 
   function openEdit(product: Product) {
     setEditing(product)
-    setFirstPicture(null)
+    setFirstPictures([])
     setForm({
       name: product.name,
       slug: product.slug,
@@ -354,21 +355,23 @@ export function AdminProductsPage() {
           ) : (
             <div className="space-y-1.5">
               <label htmlFor="first-picture" className="text-sm font-medium text-navy">
-                First picture (optional)
+                First pictures (optional)
               </label>
 
               <input
                 id="first-picture"
                 type="file"
+                multiple
                 accept="image/jpeg,image/png,image/webp,image/avif"
-                onChange={(event) => setFirstPicture(event.target.files?.[0] ?? null)}
+                onChange={(event) => setFirstPictures(Array.from(event.target.files ?? []))}
                 className="w-full rounded-2xl border border-beige bg-white px-4 py-2.5 text-sm text-navy file:mr-3 file:rounded-pill file:border-0 file:bg-navy file:px-4 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-navy-light"
               />
 
               <p className="text-xs text-muted">
-                Taken from your computer. It becomes the main picture; more can be added from
+                Taken from your computer. The first one becomes the main picture; more can be added from
                 the “Pictures” button.
-                {firstPicture ? ` · ${firstPicture.name}` : ''}
+                {firstPictures.length > 0 && ` · ${firstPictures.length} selected`}
+                {uploadProgress && ` · sending ${uploadProgress.done} of ${uploadProgress.total}...`}
               </p>
             </div>
           )}

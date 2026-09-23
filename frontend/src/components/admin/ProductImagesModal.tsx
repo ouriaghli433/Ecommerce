@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { Skeleton } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
+import { useImageUpload } from '@/hooks/useImageUpload'
 import { cn } from '@/lib/utils'
 
 /**
@@ -38,8 +39,10 @@ export function ProductImagesModal({
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const { uploadAll, progress } = useImageUpload()
+
   const [source, setSource] = useState<'file' | 'url'>('file')
-  const [file, setFile] = useState<File | null>(null)
+  const [files, setFiles] = useState<File[]>([])
   const [url, setUrl] = useState('')
   const [altText, setAltText] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -61,7 +64,7 @@ export function ProductImagesModal({
     ])
 
   function resetForm() {
-    setFile(null)
+    setFiles([])
     setUrl('')
     setAltText('')
     setErrors({})
@@ -70,16 +73,30 @@ export function ProductImagesModal({
   }
 
   const addMutation = useMutation({
-    mutationFn: () =>
-      addProductImage(productId, {
-        file: source === 'file' ? (file ?? undefined) : undefined,
-        url: source === 'url' ? url : undefined,
-        alt_text: altText || undefined,
-      }),
-    onSuccess: async () => {
+    mutationFn: async () => {
+      // Several files from the computer, or one address.
+      if (source === 'file') {
+        return uploadAll(productId, files, altText)
+      }
+
+      await addProductImage(productId, { url, alt_text: altText || undefined })
+
+      return { uploaded: 1, errors: [] as string[] }
+    },
+    onSuccess: async (result) => {
       await refresh()
       resetForm()
-      toast.success('Picture added.')
+
+      if (result.uploaded > 0) {
+        toast.success(
+          result.uploaded === 1 ? 'Picture added.' : `${result.uploaded} pictures added.`,
+        )
+      }
+
+      // Files the backend refused are named, so the admin knows which ones.
+      for (const message of result.errors) {
+        toast.error(message)
+      }
     },
     onError: (error) => {
       const info = parseApiError(error)
@@ -111,8 +128,8 @@ export function ProductImagesModal({
     event.preventDefault()
     setErrors({})
 
-    if (source === 'file' && !file) {
-      setErrors({ file: 'Choose a picture from your computer.' })
+    if (source === 'file' && files.length === 0) {
+      setErrors({ file: 'Choose one or more pictures from your computer.' })
 
       return
     }
@@ -223,16 +240,17 @@ export function ProductImagesModal({
           {source === 'file' ? (
             <div className="space-y-1.5">
               <label htmlFor="picture-file" className="text-sm font-medium text-navy">
-                Picture file
+                Picture files
               </label>
 
               <input
                 id="picture-file"
                 ref={fileInputRef}
                 type="file"
+                multiple
                 accept="image/jpeg,image/png,image/webp,image/avif"
                 onChange={(event) => {
-                  setFile(event.target.files?.[0] ?? null)
+                  setFiles(Array.from(event.target.files ?? []))
                   setErrors({})
                 }}
                 className="w-full rounded-2xl border border-beige bg-white px-4 py-2.5 text-sm text-navy file:mr-3 file:rounded-pill file:border-0 file:bg-navy file:px-4 file:py-1.5 file:text-xs file:font-medium file:text-white hover:file:bg-navy-light"
@@ -242,7 +260,8 @@ export function ProductImagesModal({
                 <p className="text-xs text-red-600">{errors.file}</p>
               ) : (
                 <p className="text-xs text-muted">
-                  JPG, PNG, WEBP or AVIF · up to 4 MB{file ? ` · ${file.name}` : ''}
+                  JPG, PNG, WEBP or AVIF · up to 4 MB each · several can be chosen
+                  {files.length > 0 && ` · ${files.length} selected`}
                 </p>
               )}
             </div>
@@ -265,9 +284,17 @@ export function ProductImagesModal({
             error={errors.alt_text}
           />
 
-          <Button type="submit" variant="secondary" loading={addMutation.isPending}>
-            Add the picture
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button type="submit" variant="secondary" loading={addMutation.isPending}>
+              {source === 'file' && files.length > 1 ? 'Add the pictures' : 'Add the picture'}
+            </Button>
+
+            {progress && (
+              <span className="text-xs text-muted">
+                Sending {progress.done} of {progress.total}…
+              </span>
+            )}
+          </div>
         </form>
       </div>
     </Modal>
