@@ -3,9 +3,9 @@ import { useQuery } from '@tanstack/react-query'
 import { getErrorMessage } from '@/api/client'
 import { listOrders } from '@/api/orders'
 import type { OrderStatus } from '@/api/types'
+import { AdminCard, AdminPageHeader } from '@/components/admin/AdminPage'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { Card, CardBody } from '@/components/ui/Card'
 import { Pagination } from '@/components/ui/Pagination'
 import { EmptyState, ErrorState, Skeleton } from '@/components/ui/States'
 import { Table, Td, Th } from '@/components/ui/Table'
@@ -53,10 +53,10 @@ export function AdminOrdersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-3xl font-semibold text-navy">Orders</h1>
-        <p className="text-sm text-muted">Every order of the shop.</p>
-      </div>
+      <AdminPageHeader
+        title="Orders"
+        description="Every order of the shop, newest first. Open one to move it along, cancel it or refund it."
+      />
 
       <div className="flex flex-wrap gap-2">
         {statuses.map((item) => (
@@ -88,9 +88,8 @@ export function AdminOrdersPage() {
       )}
 
       {ordersQuery.data && ordersQuery.data.data.length > 0 && (
-        <Card>
-          <CardBody className="p-0">
-            <Table>
+        <AdminCard bodyClassName="p-0">
+          <Table>
               <thead>
                 <tr>
                   <Th>Order</Th>
@@ -103,7 +102,7 @@ export function AdminOrdersPage() {
               </thead>
               <tbody>
                 {ordersQuery.data.data.map((order) => (
-                  <tr key={order.id}>
+                  <tr key={order.id} className="transition hover:bg-cream">
                     <Td className="font-medium">{shortId(order.id)}</Td>
                     <Td className="text-muted">{formatDate(order.created_at)}</Td>
                     <Td className="text-muted">{order.lines?.length ?? 0}</Td>
@@ -121,9 +120,8 @@ export function AdminOrdersPage() {
                   </tr>
                 ))}
               </tbody>
-            </Table>
-          </CardBody>
-        </Card>
+          </Table>
+        </AdminCard>
       )}
 
       {ordersQuery.data && (

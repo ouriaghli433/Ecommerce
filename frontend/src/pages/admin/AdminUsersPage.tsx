@@ -3,9 +3,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getErrorMessage } from '@/api/client'
 import { listUsers, updateUser } from '@/api/users'
 import type { Role, User } from '@/api/types'
+import { AdminCard, AdminPageHeader } from '@/components/admin/AdminPage'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { Card, CardBody } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
 import { Select } from '@/components/ui/Select'
 import { Pagination } from '@/components/ui/Pagination'
@@ -37,12 +37,10 @@ export function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display text-3xl font-semibold text-navy">Users</h1>
-        <p className="text-sm text-muted">
-          The role decides what a person can do. Changing it here is the only way.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Users"
+        description="The role decides what a person can do. This page is the only place where a role changes."
+      />
 
       {usersQuery.isPending && <Skeleton className="h-64 w-full" />}
 
@@ -54,8 +52,7 @@ export function AdminUsersPage() {
       )}
 
       {usersQuery.data && (
-        <Card>
-          <CardBody className="p-0">
+        <AdminCard bodyClassName="p-0">
             <Table>
               <thead>
                 <tr>
@@ -68,7 +65,7 @@ export function AdminUsersPage() {
               </thead>
               <tbody>
                 {usersQuery.data.data.map((user) => (
-                  <tr key={user.id}>
+                  <tr key={user.id} className="transition hover:bg-cream">
                     <Td>
                       {user.first_name} {user.last_name}
                     </Td>
@@ -93,8 +90,7 @@ export function AdminUsersPage() {
                 ))}
               </tbody>
             </Table>
-          </CardBody>
-        </Card>
+        </AdminCard>
       )}
 
       {usersQuery.data && (

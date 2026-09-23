@@ -1,12 +1,12 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { getProduct } from '@/api/catalog'
 import { getErrorMessage, parseApiError } from '@/api/client'
 import { createMovement, getInventory, listMovements } from '@/api/inventory'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { Card, CardBody, CardHeader } from '@/components/ui/Card'
+import { AdminCard, AdminPageHeader } from '@/components/admin/AdminPage'
 import { Input } from '@/components/ui/Input'
 import { Pagination } from '@/components/ui/Pagination'
 import { Select } from '@/components/ui/Select'
@@ -103,58 +103,46 @@ export function AdminInventoryPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/admin/products" className="text-sm text-muted hover:text-navy">
-        ← All products
-      </Link>
-
-      <div>
-        <h1 className="font-display text-3xl font-semibold text-navy">
-          Stock — {productQuery.data?.name ?? '…'}
-        </h1>
-        <p className="text-sm text-muted">SKU {productQuery.data?.sku ?? '…'}</p>
-      </div>
+      <AdminPageHeader
+        backTo="/admin/products"
+        backLabel="All products"
+        title={`Stock — ${productQuery.data?.name ?? '…'}`}
+        description={`SKU ${productQuery.data?.sku ?? '…'} · reservations, releases and sales are created by checkout and payments, never here.`}
+      />
 
       {/* The three numbers, explained */}
       {inventoryQuery.isPending || !inventory ? (
         <Skeleton className="h-28 w-full" />
       ) : (
         <div className="grid gap-4 sm:grid-cols-3">
-          <Card>
-            <CardBody>
+          <AdminCard>
               <p className="text-xs uppercase tracking-wide text-muted">On hand</p>
               <p className="mt-1 font-display text-3xl font-semibold text-navy">
                 {inventory.on_hand}
               </p>
               <p className="mt-1 text-xs text-muted">Units physically in the warehouse.</p>
-            </CardBody>
-          </Card>
+          </AdminCard>
 
-          <Card>
-            <CardBody>
+          <AdminCard>
               <p className="text-xs uppercase tracking-wide text-muted">Reserved</p>
               <p className="mt-1 font-display text-3xl font-semibold text-navy">
                 {inventory.reserved}
               </p>
               <p className="mt-1 text-xs text-muted">Held for orders waiting for payment.</p>
-            </CardBody>
-          </Card>
+          </AdminCard>
 
-          <Card className="bg-sage-soft">
-            <CardBody>
+          <AdminCard className="bg-sage-soft">
               <p className="text-xs uppercase tracking-wide text-muted">Available</p>
               <p className="mt-1 font-display text-3xl font-semibold text-navy">
                 {inventory.available}
               </p>
               <p className="mt-1 text-xs text-muted">On hand − reserved. Calculated, not stored.</p>
-            </CardBody>
-          </Card>
+          </AdminCard>
         </div>
       )}
 
       {/* New movement */}
-      <Card>
-        <CardHeader title="Add a stock movement" />
-        <CardBody>
+      <AdminCard title="Add a stock movement">
           <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-2" noValidate>
             <Select
               label="Type"
@@ -209,13 +197,10 @@ export function AdminInventoryPage() {
               </p>
             </div>
           </form>
-        </CardBody>
-      </Card>
+      </AdminCard>
 
       {/* History */}
-      <Card>
-        <CardHeader title="History" />
-        <CardBody className="p-0">
+      <AdminCard title="History" bodyClassName="p-0">
           {movementsQuery.isPending && <Skeleton className="m-6 h-40" />}
 
           {movementsQuery.data && movementsQuery.data.data.length === 0 && (
@@ -234,7 +219,7 @@ export function AdminInventoryPage() {
               </thead>
               <tbody>
                 {movementsQuery.data.data.map((movement) => (
-                  <tr key={movement.id}>
+                  <tr key={movement.id} className="transition hover:bg-cream">
                     <Td className="text-muted">{formatDate(movement.created_at)}</Td>
                     <Td>
                       <Badge tone={movement.quantity > 0 ? 'success' : 'danger'}>
@@ -250,8 +235,7 @@ export function AdminInventoryPage() {
               </tbody>
             </Table>
           )}
-        </CardBody>
-      </Card>
+      </AdminCard>
 
       {movementsQuery.data && (
         <Pagination

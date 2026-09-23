@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { newIdempotencyKey } from '@/api/checkout'
 import { getErrorMessage, parseApiError } from '@/api/client'
@@ -7,16 +7,16 @@ import { cancelOrder, getOrder, updateOrderStatus } from '@/api/orders'
 import { listOrderPayments } from '@/api/payments'
 import { createRefund, listRefunds } from '@/api/refunds'
 import type { Order, Payment } from '@/api/types'
+import { AdminCard, AdminPageHeader } from '@/components/admin/AdminPage'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { ConfirmDialog, Modal } from '@/components/ui/Modal'
 import { Select } from '@/components/ui/Select'
 import { ErrorState, Skeleton } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
 import { statusTone } from '@/lib/status'
-import { formatDate, formatMoney, humanize, shortId } from '@/lib/utils'
+import { cn, formatDate, formatMoney, humanize, shortId } from '@/lib/utils'
 
 /** The moves an admin may make, following the backend transition table. */
 function nextStatuses(order: Order): Array<'processing' | 'shipped' | 'delivered'> {
@@ -30,6 +30,61 @@ function nextStatuses(order: Order): Array<'processing' | 'shipped' | 'delivered
     default:
       return []
   }
+}
+
+/** The normal journey of an order, used to draw the little timeline. */
+const journey = [
+  { status: 'pending_payment', label: 'Placed' },
+  { status: 'paid', label: 'Paid' },
+  { status: 'processing', label: 'Prepared' },
+  { status: 'shipped', label: 'Shipped' },
+  { status: 'delivered', label: 'Delivered' },
+] as const
+
+function OrderTimeline({ order }: { order: Order }) {
+  // Cancelled and expired leave the journey, so the line is not drawn.
+  if (order.status === 'cancelled' || order.status === 'expired') {
+    return (
+      <p className="text-sm text-muted">
+        This order is {humanize(order.status).toLowerCase()}
+        {order.cancelled_at ? ` since ${formatDate(order.cancelled_at)}` : ''}
+        {order.cancel_reason ? ` · ${order.cancel_reason}` : ''}.
+      </p>
+    )
+  }
+
+  const currentIndex = journey.findIndex((step) => step.status === order.status)
+
+  return (
+    <ol className="flex flex-wrap gap-y-3">
+      {journey.map((step, index) => {
+        const done = index <= currentIndex
+
+        return (
+          <li key={step.status} className="flex flex-1 items-center gap-2 last:flex-none">
+            <span
+              className={cn(
+                'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                done ? 'bg-sage text-navy' : 'bg-cream text-muted',
+              )}
+            >
+              {done ? '✓' : index + 1}
+            </span>
+
+            <span className={cn('text-xs', done ? 'font-medium text-navy' : 'text-muted')}>
+              {step.label}
+            </span>
+
+            {index < journey.length - 1 && (
+              <span
+                className={cn('mx-1 hidden h-px flex-1 sm:block', done ? 'bg-sage' : 'bg-beige')}
+              />
+            )}
+          </li>
+        )
+      })}
+    </ol>
+  )
 }
 
 export function AdminOrderDetailPage() {
@@ -136,7 +191,6 @@ export function AdminOrderDetailPage() {
   const moves = nextStatuses(order)
   const canCancel = ['pending_payment', 'paid', 'processing'].includes(order.status)
 
-  // What is left to refund on the first succeeded payment.
   const refunded =
     refundsQuery.data
       ?.filter((refund) => refund.status !== 'failed')
@@ -145,41 +199,41 @@ export function AdminOrderDetailPage() {
 
   return (
     <div className="space-y-6">
-      <Link to="/admin/orders" className="text-sm text-muted hover:text-navy">
-        ← All orders
-      </Link>
+      <AdminPageHeader
+        backTo="/admin/orders"
+        backLabel="All orders"
+        title={`Order ${shortId(order.id)}`}
+        description={`Placed ${formatDate(order.created_at)} · customer ${shortId(order.user_id)}`}
+        action={<Badge tone={statusTone(order.status)}>{humanize(order.status)}</Badge>}
+      />
 
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-semibold text-navy">
-            Order {shortId(order.id)}
-          </h1>
-          <p className="text-sm text-muted">
-            {formatDate(order.created_at)} · customer {shortId(order.user_id)}
-          </p>
-        </div>
-        <Badge tone={statusTone(order.status)}>{humanize(order.status)}</Badge>
-      </div>
+      <AdminCard>
+        <OrderTimeline order={order} />
+      </AdminCard>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
-          <Card>
-            <CardHeader title="Items" />
-            <CardBody className="space-y-2 text-sm">
+          <AdminCard title="Items">
+            <ul className="divide-y divide-beige/50 text-sm">
               {order.lines?.map((line) => (
-                <div key={line.id} className="flex justify-between gap-4">
-                  <span>
-                    {line.quantity} × {line.product_name ?? 'Product'}
+                <li key={line.id} className="flex justify-between gap-4 py-3 first:pt-0 last:pb-0">
+                  <span className="text-navy">
+                    <span className="font-medium">{line.quantity} ×</span>{' '}
+                    {line.product_name ?? 'Product'}
+                    <span className="block text-xs text-muted">
+                      {formatMoney(line.unit_price, order.currency)} each, frozen at purchase
+                    </span>
                   </span>
-                  <span className="font-medium">{formatMoney(line.line_total, order.currency)}</span>
-                </div>
+                  <span className="font-medium">
+                    {formatMoney(line.line_total, order.currency)}
+                  </span>
+                </li>
               ))}
-            </CardBody>
-          </Card>
+            </ul>
+          </AdminCard>
 
-          <Card>
-            <CardHeader title="Delivery" />
-            <CardBody className="text-sm text-muted">
+          <AdminCard title="Delivery address">
+            <div className="text-sm text-muted">
               <p className="font-medium text-navy">{order.shipping_address.full_name}</p>
               <p>{order.shipping_address.address_line}</p>
               <p>
@@ -190,14 +244,17 @@ export function AdminOrderDetailPage() {
                 , {order.shipping_address.country}
               </p>
               <p>{order.shipping_address.phone}</p>
-            </CardBody>
-          </Card>
+              <p className="mt-2 text-xs">
+                This is the copy made when the order was placed; editing the customer's address
+                does not change it.
+              </p>
+            </div>
+          </AdminCard>
 
-          <Card>
-            <CardHeader title="Payments" />
-            <CardBody className="space-y-3">
+          <AdminCard title="Payments & refunds">
+            <div className="space-y-3">
               {paymentsQuery.data?.length === 0 && (
-                <p className="text-sm text-muted">No payment attempt.</p>
+                <p className="text-sm text-muted">No payment attempt yet.</p>
               )}
 
               {paymentsQuery.data?.map((payment) => (
@@ -205,17 +262,20 @@ export function AdminOrderDetailPage() {
                   key={payment.id}
                   className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-cream px-4 py-3 text-sm"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-medium text-navy">
                       {formatMoney(payment.amount, payment.currency)} · {payment.provider}
                     </p>
-                    <p className="text-xs text-muted">{payment.provider_ref ?? '—'}</p>
+                    <p className="truncate text-xs text-muted">
+                      {payment.provider_ref ?? 'no reference yet'}
+                      {payment.failure_reason ? ` · ${humanize(payment.failure_reason)}` : ''}
+                    </p>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <Badge tone={statusTone(payment.status)}>{humanize(payment.status)}</Badge>
 
-                    {payment.status === 'succeeded' && (
+                    {payment.status === 'succeeded' && refundable > 0 && (
                       <Button
                         size="sm"
                         variant="ghost"
@@ -237,7 +297,7 @@ export function AdminOrderDetailPage() {
 
               {refundsQuery.data && refundsQuery.data.length > 0 && (
                 <div className="space-y-2 border-t border-beige/60 pt-3">
-                  <p className="text-xs uppercase tracking-wide text-muted">Refunds</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted">Refunds</p>
                   {refundsQuery.data.map((refund) => (
                     <div key={refund.id} className="flex justify-between gap-3 text-sm">
                       <span className="text-muted">
@@ -246,69 +306,83 @@ export function AdminOrderDetailPage() {
                       <Badge tone={statusTone(refund.status)}>{humanize(refund.status)}</Badge>
                     </div>
                   ))}
+
+                  {refundable === 0 && (
+                    <p className="text-xs text-muted">Fully refunded.</p>
+                  )}
                 </div>
               )}
-            </CardBody>
-          </Card>
+            </div>
+          </AdminCard>
         </div>
 
-        <div className="space-y-4">
-          <Card>
-            <CardHeader title="Summary" />
-            <CardBody className="space-y-2 text-sm">
+        <div className="space-y-6">
+          <AdminCard title="Summary">
+            <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted">Items</span>
-                <span>{formatMoney(order.subtotal, order.currency)}</span>
+                <dt className="text-muted">Items</dt>
+                <dd>{formatMoney(order.subtotal, order.currency)}</dd>
               </div>
               {order.discount_amount > 0 && (
                 <div className="flex justify-between text-emerald-700">
-                  <span>Discount {order.coupon_code ? `(${order.coupon_code})` : ''}</span>
-                  <span>−{formatMoney(order.discount_amount, order.currency)}</span>
+                  <dt>Discount {order.coupon_code ? `(${order.coupon_code})` : ''}</dt>
+                  <dd>−{formatMoney(order.discount_amount, order.currency)}</dd>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-muted">Delivery</span>
-                <span>{formatMoney(order.shipping_amount, order.currency)}</span>
+                <dt className="text-muted">Delivery</dt>
+                <dd>
+                  {order.shipping_amount === 0
+                    ? 'Free'
+                    : formatMoney(order.shipping_amount, order.currency)}
+                </dd>
               </div>
-              <div className="flex justify-between border-t border-beige/60 pt-2 font-display text-lg font-semibold">
-                <span>Total</span>
-                <span>{formatMoney(order.total_amount, order.currency)}</span>
-              </div>
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader title="Move the order" />
-            <CardBody className="space-y-3">
-              {moves.length === 0 ? (
-                <p className="text-sm text-muted">
-                  Nothing to do from this status. Paid comes from a payment, expired from the
-                  expiration job.
-                </p>
-              ) : (
-                moves.map((status) => (
-                  <Button
-                    key={status}
-                    className="w-full"
-                    loading={statusMutation.isPending}
-                    onClick={() => statusMutation.mutate(status)}
-                  >
-                    Mark as {humanize(status).toLowerCase()}
-                  </Button>
-                ))
+              {order.tax_amount > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted">Tax</dt>
+                  <dd>{formatMoney(order.tax_amount, order.currency)}</dd>
+                </div>
               )}
+              <div className="flex justify-between border-t border-beige/60 pt-2 font-display text-lg font-semibold text-navy">
+                <dt>Total</dt>
+                <dd>{formatMoney(order.total_amount, order.currency)}</dd>
+              </div>
+            </dl>
+          </AdminCard>
+
+          <AdminCard title="Actions">
+            <div className="space-y-3">
+              {moves.map((status) => (
+                <Button
+                  key={status}
+                  className="w-full"
+                  loading={statusMutation.isPending}
+                  onClick={() => statusMutation.mutate(status)}
+                >
+                  Mark as {humanize(status).toLowerCase()}
+                </Button>
+              ))}
 
               {canCancel && (
-                <Button
-                  variant="ghost"
-                  className="w-full"
-                  onClick={() => setConfirmCancel(true)}
-                >
+                <Button variant="ghost" className="w-full" onClick={() => setConfirmCancel(true)}>
                   Cancel the order
                 </Button>
               )}
-            </CardBody>
-          </Card>
+
+              {moves.length === 0 && !canCancel && (
+                <p className="text-sm text-muted">
+                  Nothing to do: this order is {humanize(order.status).toLowerCase()}.
+                </p>
+              )}
+
+              {order.status === 'pending_payment' && (
+                <p className="text-xs text-muted">
+                  Waiting for the customer to pay. The order becomes paid only when the provider
+                  confirms it, and expires on its own after {formatDate(order.expires_at)}.
+                </p>
+              )}
+            </div>
+          </AdminCard>
         </div>
       </div>
 

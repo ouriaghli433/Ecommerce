@@ -9,9 +9,9 @@ import {
 } from '@/api/catalog'
 import { getErrorMessage, parseApiError } from '@/api/client'
 import type { Category } from '@/api/types'
+import { AdminCard, AdminPageHeader } from '@/components/admin/AdminPage'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { Card, CardBody } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { ConfirmDialog, Modal } from '@/components/ui/Modal'
 import { Select } from '@/components/ui/Select'
@@ -114,13 +114,11 @@ export function AdminCategoriesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-semibold text-navy">Categories</h1>
-          <p className="text-sm text-muted">Group the products of the shop.</p>
-        </div>
-        <Button onClick={openCreate}>New category</Button>
-      </div>
+      <AdminPageHeader
+        title="Categories"
+        description="The menu of the shop. A category can sit inside another one, which is what the navbar shows."
+        action={<Button onClick={openCreate}>New category</Button>}
+      />
 
       {categoriesQuery.isPending && <Skeleton className="h-64 w-full" />}
 
@@ -144,8 +142,7 @@ export function AdminCategoriesPage() {
       )}
 
       {categoriesQuery.data && categoriesQuery.data.length > 0 && (
-        <Card>
-          <CardBody className="p-0">
+        <AdminCard bodyClassName="p-0">
             <Table>
               <thead>
                 <tr>
@@ -158,7 +155,7 @@ export function AdminCategoriesPage() {
               </thead>
               <tbody>
                 {categoriesQuery.data.map((category) => (
-                  <tr key={category.id}>
+                  <tr key={category.id} className="transition hover:bg-cream">
                     <Td className="font-medium">{category.name}</Td>
                     <Td className="text-muted">{category.slug}</Td>
                     <Td className="text-muted">
@@ -182,8 +179,7 @@ export function AdminCategoriesPage() {
                 ))}
               </tbody>
             </Table>
-          </CardBody>
-        </Card>
+        </AdminCard>
       )}
 
       <Modal

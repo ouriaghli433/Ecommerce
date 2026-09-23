@@ -3,50 +3,43 @@ import { useQuery } from '@tanstack/react-query'
 import { listProducts } from '@/api/catalog'
 import { listOrders } from '@/api/orders'
 import { listUsers } from '@/api/users'
-import { Card, CardBody } from '@/components/ui/Card'
+import type { OrderStatus } from '@/api/types'
+import { AdminCard, AdminPageHeader, StatCard } from '@/components/admin/AdminPage'
 import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/States'
+import { Table, Td, Th } from '@/components/ui/Table'
 import { statusTone } from '@/lib/status'
 import { formatDate, formatMoney, humanize, shortId } from '@/lib/utils'
 
-/** One number, taken from the "total" of a paginated list. */
-function StatCard({ label, value, to }: { label: string; value: string; to: string }) {
-  return (
-    <Link to={to}>
-      <Card className="transition hover:shadow-card">
-        <CardBody>
-          <p className="text-xs uppercase tracking-wide text-muted">{label}</p>
-          <p className="mt-2 font-display text-3xl font-semibold text-navy">{value}</p>
-        </CardBody>
-      </Card>
-    </Link>
-  )
+/** Counts one status without loading every order: the API gives the total. */
+function useOrderCount(status?: OrderStatus) {
+  return useQuery({
+    queryKey: ['admin-orders', { status: status ?? 'all' }],
+    queryFn: () => listOrders(status ? { status } : {}),
+  })
 }
 
 export function AdminDashboardPage() {
-  const ordersQuery = useQuery({ queryKey: ['admin-orders', {}], queryFn: () => listOrders({}) })
-  const toPayQuery = useQuery({
-    queryKey: ['admin-orders', { status: 'pending_payment' }],
-    queryFn: () => listOrders({ status: 'pending_payment' }),
-  })
-  const paidQuery = useQuery({
-    queryKey: ['admin-orders', { status: 'paid' }],
-    queryFn: () => listOrders({ status: 'paid' }),
-  })
-  const productsQuery = useQuery({ queryKey: ['admin-products'], queryFn: () => listProducts({}) })
-  const usersQuery = useQuery({ queryKey: ['admin-users', 1], queryFn: () => listUsers(1) })
+  const allOrders = useOrderCount()
+  const toPay = useOrderCount('pending_payment')
+  const paid = useOrderCount('paid')
+  const processing = useOrderCount('processing')
+  const shipped = useOrderCount('shipped')
 
-  const loading =
-    ordersQuery.isPending || productsQuery.isPending || usersQuery.isPending
+  const products = useQuery({ queryKey: ['admin-products', 1], queryFn: () => listProducts({}) })
+  const users = useQuery({ queryKey: ['admin-users', 1], queryFn: () => listUsers(1) })
 
-  const recent = ordersQuery.data?.data.slice(0, 6) ?? []
+  const loading = allOrders.isPending || products.isPending || users.isPending
+
+  const recent = allOrders.data?.data.slice(0, 6) ?? []
+  const waiting = paid.data?.data.slice(0, 4) ?? []
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-3xl font-semibold text-navy">Dashboard</h1>
-        <p className="text-sm text-muted">A quick look at the shop.</p>
-      </div>
+      <AdminPageHeader
+        title="Dashboard"
+        description="What the shop looks like right now. Every number comes from the API."
+      />
 
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -58,63 +51,132 @@ export function AdminDashboardPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             label="Orders"
-            value={String(ordersQuery.data?.meta.total ?? 0)}
+            value={allOrders.data?.meta.total ?? 0}
+            hint="All time"
             to="/admin/orders"
           />
           <StatCard
             label="Waiting for payment"
-            value={String(toPayQuery.data?.meta.total ?? 0)}
+            value={toPay.data?.meta.total ?? 0}
+            hint="Stock is reserved for these"
+            tone="warning"
             to="/admin/orders?status=pending_payment"
           />
           <StatCard
-            label="Paid"
-            value={String(paidQuery.data?.meta.total ?? 0)}
+            label="To prepare"
+            value={paid.data?.meta.total ?? 0}
+            hint="Paid, not yet packed"
+            tone="sage"
             to="/admin/orders?status=paid"
           />
           <StatCard
-            label="Products"
-            value={String(productsQuery.data?.meta.total ?? 0)}
-            to="/admin/products"
+            label="On the way"
+            value={(processing.data?.meta.total ?? 0) + (shipped.data?.meta.total ?? 0)}
+            hint="Preparing or shipped"
+            to="/admin/orders?status=shipped"
           />
         </div>
       )}
 
-      <Card>
-        <CardBody className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-display text-lg font-semibold text-navy">Latest orders</h2>
+      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+        <AdminCard
+          title="Latest orders"
+          bodyClassName="p-0"
+          action={
             <Link to="/admin/orders" className="text-sm text-muted hover:text-navy">
               See all
             </Link>
-          </div>
+          }
+        >
+          {recent.length === 0 ? (
+            <p className="p-5 text-sm text-muted">No order yet.</p>
+          ) : (
+            <Table>
+              <thead>
+                <tr>
+                  <Th>Order</Th>
+                  <Th>Date</Th>
+                  <Th>Status</Th>
+                  <Th className="text-right">Total</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {recent.map((order) => (
+                  <tr key={order.id} className="transition hover:bg-cream">
+                    <Td>
+                      <Link
+                        to={`/admin/orders/${order.id}`}
+                        className="font-medium text-navy hover:underline"
+                      >
+                        {shortId(order.id)}
+                      </Link>
+                    </Td>
+                    <Td className="text-muted">{formatDate(order.created_at)}</Td>
+                    <Td>
+                      <Badge tone={statusTone(order.status)}>{humanize(order.status)}</Badge>
+                    </Td>
+                    <Td className="text-right font-medium">
+                      {formatMoney(order.total_amount, order.currency)}
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          )}
+        </AdminCard>
 
-          {recent.length === 0 && <p className="text-sm text-muted">No order yet.</p>}
+        <div className="space-y-6">
+          <AdminCard title="Needs packing">
+            {waiting.length === 0 ? (
+              <p className="text-sm text-muted">Nothing waiting. Everything is handled.</p>
+            ) : (
+              <ul className="space-y-3">
+                {waiting.map((order) => (
+                  <li key={order.id}>
+                    <Link
+                      to={`/admin/orders/${order.id}`}
+                      className="flex items-center justify-between gap-3 rounded-2xl bg-cream px-4 py-3 text-sm transition hover:bg-sage-soft"
+                    >
+                      <span className="font-medium text-navy">{shortId(order.id)}</span>
+                      <span className="text-muted">
+                        {formatMoney(order.total_amount, order.currency)}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </AdminCard>
 
-          <div className="space-y-2">
-            {recent.map((order) => (
+          <AdminCard title="Catalogue">
+            <dl className="space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <dt className="text-muted">Products</dt>
+                <dd className="font-medium text-navy">{products.data?.meta.total ?? 0}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-muted">Customers & admins</dt>
+                <dd className="font-medium text-navy">{users.data?.meta.total ?? 0}</dd>
+              </div>
+            </dl>
+
+            <div className="mt-4 flex flex-wrap gap-2">
               <Link
-                key={order.id}
-                to={`/admin/orders/${order.id}`}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-cream px-4 py-3 text-sm hover:bg-sage-soft/60"
+                to="/admin/products"
+                className="rounded-pill bg-navy px-4 py-2 text-xs font-medium text-white hover:bg-navy-light"
               >
-                <span className="font-medium text-navy">{shortId(order.id)}</span>
-                <span className="text-muted">{formatDate(order.created_at)}</span>
-                <Badge tone={statusTone(order.status)}>{humanize(order.status)}</Badge>
-                <span className="font-medium">
-                  {formatMoney(order.total_amount, order.currency)}
-                </span>
+                Manage products
               </Link>
-            ))}
-          </div>
-        </CardBody>
-      </Card>
-
-      <p className="text-xs text-muted">
-        Users: {usersQuery.data?.meta.total ?? 0} account(s) ·{' '}
-        <Link to="/admin/users" className="underline">
-          manage
-        </Link>
-      </p>
+              <Link
+                to="/admin/categories"
+                className="rounded-pill bg-cream px-4 py-2 text-xs font-medium text-navy hover:bg-sage-soft"
+              >
+                Categories
+              </Link>
+            </div>
+          </AdminCard>
+        </div>
+      </div>
     </div>
   )
 }

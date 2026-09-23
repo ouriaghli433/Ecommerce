@@ -9,9 +9,9 @@ import {
   type CouponPayload,
 } from '@/api/coupons'
 import type { Coupon } from '@/api/types'
+import { AdminCard, AdminPageHeader } from '@/components/admin/AdminPage'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { Card, CardBody } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { ConfirmDialog, Modal } from '@/components/ui/Modal'
 import { Pagination } from '@/components/ui/Pagination'
@@ -141,15 +141,11 @@ export function AdminCouponsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-semibold text-navy">Coupons</h1>
-          <p className="text-sm text-muted">
-            The discount is applied by the shop at checkout, with its limits.
-          </p>
-        </div>
-        <Button onClick={openCreate}>New coupon</Button>
-      </div>
+      <AdminPageHeader
+        title="Coupons"
+        description="Discount codes. The shop checks the dates, the minimum amount and the limits when the order is placed."
+        action={<Button onClick={openCreate}>New coupon</Button>}
+      />
 
       {couponsQuery.isPending && <Skeleton className="h-64 w-full" />}
 
@@ -165,8 +161,7 @@ export function AdminCouponsPage() {
       )}
 
       {couponsQuery.data && couponsQuery.data.data.length > 0 && (
-        <Card>
-          <CardBody className="p-0">
+        <AdminCard bodyClassName="p-0">
             <Table>
               <thead>
                 <tr>
@@ -181,7 +176,7 @@ export function AdminCouponsPage() {
               </thead>
               <tbody>
                 {couponsQuery.data.data.map((coupon) => (
-                  <tr key={coupon.id}>
+                  <tr key={coupon.id} className="transition hover:bg-cream">
                     <Td className="font-medium">{coupon.code}</Td>
                     <Td>{describeValue(coupon)}</Td>
                     <Td className="text-muted">
@@ -211,8 +206,7 @@ export function AdminCouponsPage() {
                 ))}
               </tbody>
             </Table>
-          </CardBody>
-        </Card>
+        </AdminCard>
       )}
 
       {couponsQuery.data && (

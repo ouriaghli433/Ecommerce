@@ -12,9 +12,9 @@ import {
 import { getErrorMessage, parseApiError } from '@/api/client'
 import type { Product } from '@/api/types'
 import { ProductThumb } from '@/components/shop/ProductThumb'
+import { AdminCard, AdminPageHeader } from '@/components/admin/AdminPage'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { Card, CardBody } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
 import { ConfirmDialog, Modal } from '@/components/ui/Modal'
 import { Pagination } from '@/components/ui/Pagination'
@@ -149,17 +149,15 @@ export function AdminProductsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl font-semibold text-navy">Products</h1>
-          <p className="text-sm text-muted">
-            A new product starts with an empty stock; add units from its stock page.
-          </p>
-        </div>
-        <Button onClick={openCreate} disabled={!categoriesQuery.data?.length}>
-          New product
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Products"
+        description="A new product starts with an empty stock and no picture; add both from its own page."
+        action={
+          <Button onClick={openCreate} disabled={!categoriesQuery.data?.length}>
+            New product
+          </Button>
+        }
+      />
 
       {productsQuery.isPending && <Skeleton className="h-64 w-full" />}
 
@@ -175,8 +173,7 @@ export function AdminProductsPage() {
       )}
 
       {productsQuery.data && productsQuery.data.data.length > 0 && (
-        <Card>
-          <CardBody className="p-0">
+        <AdminCard bodyClassName="p-0">
             <Table>
               <thead>
                 <tr>
@@ -190,7 +187,7 @@ export function AdminProductsPage() {
               </thead>
               <tbody>
                 {productsQuery.data.data.map((product) => (
-                  <tr key={product.id}>
+                  <tr key={product.id} className="transition hover:bg-cream">
                     <Td className="font-medium">
                       <span className="flex items-center gap-3">
                         <span className="h-10 w-10 flex-none overflow-hidden rounded-xl bg-sage-soft">
@@ -228,8 +225,7 @@ export function AdminProductsPage() {
                 ))}
               </tbody>
             </Table>
-          </CardBody>
-        </Card>
+        </AdminCard>
       )}
 
       {productsQuery.data && (
