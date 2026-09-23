@@ -74,9 +74,18 @@ status, products = call("GET", "/products", expect=200)
 check("public product listing works", len(products["data"]) > 0, f"{products['meta']['total']} products")
 check("listing carries no stock (not cached)", "available_stock" not in products["data"][0])
 
-product = products["data"][0]
-status, detail = call("GET", f"/products/{product['id']}", expect=200)
-stock = detail["data"]["available_stock"]
+# Pick a product that really has stock: the seeded orders hold some of it.
+product, detail, stock = None, None, 0
+
+for candidate in products["data"]:
+    status, candidate_detail = call("GET", f"/products/{candidate['id']}", expect=200)
+
+    if candidate_detail["data"]["available_stock"] > 2:
+        product, detail = candidate, candidate_detail
+        stock = candidate_detail["data"]["available_stock"]
+        break
+
+check("a product with stock was found", product is not None, f"available={stock}")
 check("product page shows live stock", isinstance(stock, int), f"available={stock}")
 
 # 3. Cart
@@ -85,9 +94,15 @@ status, cart = call("GET", "/cart", token=token, expect=200)
 check("cart holds the product", cart["data"]["lines"][0]["quantity"] == 2)
 
 line_id = cart["data"]["lines"][0]["id"]
-call("PATCH", f"/cart/lines/{line_id}", {"quantity": 1}, token=token, expect=200)
+
+# Buy enough to pass the 200.00 MAD minimum of the WELCOME10 coupon,
+# without asking for more than the shop has.
+price = detail["data"]["price"]
+needed = min(stock, max(1, -(-20000 // price)))
+
+call("PATCH", f"/cart/lines/{line_id}", {"quantity": needed}, token=token, expect=200)
 status, cart = call("GET", "/cart", token=token, expect=200)
-check("cart quantity can be updated", cart["data"]["lines"][0]["quantity"] == 1)
+check("cart quantity can be updated", cart["data"]["lines"][0]["quantity"] == needed)
 
 status, body = call("POST", "/cart/lines", {"product_id": product["id"], "quantity": 99999}, token=token)
 check("cart refuses more than the stock", status == 422, body.get("message", "")[:60])
@@ -146,8 +161,8 @@ check("payment is succeeded", payments["data"][0]["status"] == "succeeded")
 
 # stock: reservation became a sale
 status, detail_after = call("GET", f"/products/{product['id']}", expect=200)
-check("stock was sold, not just released", detail_after["data"]["available_stock"] == stock - 1,
-      f"{stock} -> {detail_after['data']['available_stock']}")
+check("stock was sold, not just released", detail_after["data"]["available_stock"] == stock - needed,
+      f"{stock} -> {detail_after['data']['available_stock']} (bought {needed})")
 
 # duplicate provider event changes nothing
 artisan("payment:simulate", payment["provider_ref"])
