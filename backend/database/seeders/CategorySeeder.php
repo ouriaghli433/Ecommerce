@@ -6,8 +6,8 @@ use App\Models\Category;
 use Illuminate\Database\Seeder;
 
 /**
- * Four main categories, each with two sub-categories, so the category tree
- * (RG4) is visible in the shop and in the admin.
+ * Four main categories, each with its sub-categories, so the category tree
+ * (RG4) is visible in the shop menu and in the admin.
  */
 class CategorySeeder extends Seeder
 {
@@ -15,10 +15,10 @@ class CategorySeeder extends Seeder
      * parent => [children]
      */
     private array $tree = [
-        'Electronics' => ['Phones', 'Laptops'],
+        'Electronics' => ['Phones', 'Laptops', 'Tablets'],
         'Audio' => ['Headphones', 'Speakers'],
-        'Accessories' => ['Chargers', 'Cases'],
-        'Home' => ['Lighting', 'Kitchen'],
+        'Accessories' => ['Chargers', 'Phone cases'],
+        'Home' => ['Lighting & decoration', 'Kitchen'],
     ];
 
     public function run(): void
