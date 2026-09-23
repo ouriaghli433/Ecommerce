@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Cart\CartController;
 use App\Http\Controllers\Catalog\CategoryController;
 use App\Http\Controllers\Catalog\ProductController;
+use App\Http\Controllers\Catalog\ProductImageController;
 use App\Http\Controllers\Checkout\CheckoutController;
 use App\Http\Controllers\Coupon\CouponController;
 use App\Http\Controllers\Inventory\InventoryController;
@@ -50,6 +51,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('categories', CategoryController::class)->only(['store', 'update', 'destroy']);
     Route::apiResource('products', ProductController::class)->only(['store', 'update', 'destroy']);
+
+    // Pictures of a product (admin)
+    Route::get('/products/{product}/images', [ProductImageController::class, 'index']);
+    Route::post('/products/{product}/images', [ProductImageController::class, 'store']);
+    Route::patch('/products/{product}/images/{image}', [ProductImageController::class, 'update']);
+    Route::delete('/products/{product}/images/{image}', [ProductImageController::class, 'destroy']);
 
     // The logged-in customer's cart
     Route::get('/cart', [CartController::class, 'show']);
