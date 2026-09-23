@@ -330,17 +330,6 @@ categories, coupons and users.
 - After starting a payment the order page polls until the provider's webhook
   confirms it. A payment is never "succeeded" because the browser says so.
 
-### Checking the whole flow
-
-```bash
-python scripts/flow-check.py
-```
-
-It walks register → browse → cart → address → checkout → payment →
-provider event → order paid → stock sold, plus the failure paths
-(failed payment, duplicate webhook, duplicate checkout, cancellation)
-against the running API. It needs the containers up and the demo data.
-
 ---
 
 ## 9. Troubleshooting
