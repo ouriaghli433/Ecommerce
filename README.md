@@ -73,11 +73,11 @@ What the seeders create (`backend/database/seeders/`):
 | Seeder | Data |
 |---|---|
 | `UserSeeder` | 2 admins + 25 customers |
-| `CategorySeeder` | 4 main categories, 8 sub-categories, 1 hidden |
-| `ProductSeeder` | 35 products with real stock, 2 of them not on sale |
+| `CategorySeeder` | 4 main categories, 9 sub-categories, 1 hidden |
+| `ProductSeeder` | 40 products with real stock and 101 pictures, 2 not on sale |
 | `CouponSeeder` | 8 coupons: percent, fixed, with limits, expired, not started, off |
 | `AddressSeeder` | a default address per customer, a second one for some |
-| `OrderSeeder` | ~33 orders spread over the last 60 days, in every status |
+| `OrderSeeder` | ~32 orders spread over the last 60 days, in every status |
 | `CartSeeder` | a few carts left open |
 
 **The orders are created through the real services** (`CheckoutService`,
@@ -152,7 +152,7 @@ admin; an existing admin changes a role with `PATCH /api/users/{id}`.
 |---|---|---|
 | POST | `/api/register`, `/api/login` | returns a token |
 | GET | `/api/categories`, `/api/categories/{id}` | active only (admins see all) |
-| GET | `/api/products`, `/api/products/{id}` | filters `?category_id=` `?search=`, paginated |
+| GET | `/api/products`, `/api/products/{id}` | filters `?category_id=` `?search=`, paginated; the listing carries the main picture, the product page the whole gallery |
 | POST | `/api/webhooks/payments/{provider}` | provider only, signed |
 
 ### Customer (token)
@@ -173,6 +173,7 @@ admin; an existing admin changes a role with `PATCH /api/users/{id}`.
 |---|---|---|
 | GET/PATCH | `/api/users`, `/api/users/{id}` | change a role |
 | POST/PATCH/DELETE | `/api/categories`, `/api/products` | |
+| GET/POST | `/api/products/{id}/images` · PATCH/DELETE `/api/products/{id}/images/{imageId}` | product pictures |
 | GET | `/api/products/{id}/inventory` | on_hand, reserved, available |
 | GET/POST | `/api/products/{id}/inventory/movements` | purchase, return, damage, adjustment |
 | GET/POST/PATCH/DELETE | `/api/coupons` | |
