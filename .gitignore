@@ -1,0 +1,8 @@
+# Local documents that are not part of the code (slides, exports...).
+docs/
+
+# Office lock files, created while a document is open.
+~$*
+
+# Vite cache
+frontend/.vite/
