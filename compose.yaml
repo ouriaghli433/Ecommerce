@@ -21,6 +21,64 @@ services:
       - ./backend:/var/www/html
       - backend_vendor:/var/www/html/vendor
 
+  # Runs the queued jobs: notifications and order expiration.
+  # Without it the jobs simply wait in the "jobs" table.
+  worker:
+    image: ecommerce-backend:dev
+
+    container_name: ecommerce-worker
+
+    working_dir: /var/www/html
+
+    command: php artisan queue:work --tries=3 --sleep=1 --max-time=3600
+
+    environment:
+      DB_CONNECTION: pgsql
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_DATABASE: ecommerce
+      DB_USERNAME: ecommerce
+      DB_PASSWORD: ecommerce
+
+    volumes:
+      - ./backend:/var/www/html
+      - backend_vendor:/var/www/html/vendor
+
+    depends_on:
+      - backend
+      - database
+
+    restart: unless-stopped
+
+  # The clock: queues the expiration of unpaid orders every minute and
+  # cleans old idempotency keys every day.
+  scheduler:
+    image: ecommerce-backend:dev
+
+    container_name: ecommerce-scheduler
+
+    working_dir: /var/www/html
+
+    command: php artisan schedule:work
+
+    environment:
+      DB_CONNECTION: pgsql
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_DATABASE: ecommerce
+      DB_USERNAME: ecommerce
+      DB_PASSWORD: ecommerce
+
+    volumes:
+      - ./backend:/var/www/html
+      - backend_vendor:/var/www/html/vendor
+
+    depends_on:
+      - backend
+      - database
+
+    restart: unless-stopped
+
   database:
     image: postgres:15-alpine
 
