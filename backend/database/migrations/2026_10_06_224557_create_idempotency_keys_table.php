@@ -19,12 +19,11 @@ return new class extends Migration
             $table->integer('response_status');
             $table->jsonb('response_body');
             $table->timestamp('expires_at');
-           
 
             $table->foreignUuid('user_id')->constrained('users')
                 ->restrictOnDelete()
                 ->cascadeOnUpdate();
-            $table->unique(['user_id', 'key']); // user cant use same key but others can 
+            $table->unique(['user_id', 'key']); // user cant use same key but others can
 
             $table->timestamps();
         });

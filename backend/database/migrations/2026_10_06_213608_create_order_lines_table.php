@@ -22,7 +22,7 @@ return new class extends Migration
             $table->foreignUuid('order_id')->constrained('orders')
                 ->restrictOnDelete()
                 ->cascadeOnUpdate();
-            
+
             $table->timestamps();
         });
     }

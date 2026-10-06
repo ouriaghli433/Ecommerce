@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreignUuid('created_by')->nullable()->constrained('users')
                 ->nullOnDelete()
                 ->cascadeOnUpdate();
-            $table->enum('movement_type',['purchase','reservation','release','sale','return','damage','adjustment']);
+            $table->enum('movement_type', ['purchase', 'reservation', 'release', 'sale', 'return', 'damage', 'adjustment']);
             $table->integer('quantity');
             $table->string('reason')->nullable();
             $table->string('reference_type')->nullable();

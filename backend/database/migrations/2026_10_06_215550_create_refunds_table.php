@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('refunds', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->integer('amount');
-            $table->enum('status', ['pending','succeeded','failed',]);
-            $table->enum('reason', ['late_payment','order_cancelled','customer_request','admin']);
+            $table->enum('status', ['pending', 'succeeded', 'failed']);
+            $table->enum('reason', ['late_payment', 'order_cancelled', 'customer_request', 'admin']);
             $table->string('provider_ref')->unique()->nullable();
 
             $table->foreignUuid('payment_id')->constrained('payments')

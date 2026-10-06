@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->enum('status', ['pending_payment','paid','processing','shipped','delivered','cancelled','expired']);
+            $table->enum('status', ['pending_payment', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'expired']);
             $table->integer('subtotal');
             $table->integer('discount_amount');
             $table->integer('shipping_amount');
@@ -30,7 +30,7 @@ return new class extends Migration
             $table->string('shipping_city');
             $table->string('shipping_postal_code')->nullable();
             $table->string('shipping_country');
-            
+
             $table->foreignUuid('user_id')->constrained('users')
                 ->restrictOnDelete()
                 ->cascadeOnUpdate();
