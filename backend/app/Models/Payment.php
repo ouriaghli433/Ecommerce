@@ -15,16 +15,19 @@ class Payment extends Model
         'failure_reason',
         'succeeded_at',
     ];
+
     protected function casts(): array
     {
         return [
             'succeeded_at' => 'datetime',
         ];
     }
+
     public function order()
     {
         return $this->belongsTo(Order::class);
     }
+
     public function refunds()
     {
         return $this->hasMany(Refund::class);

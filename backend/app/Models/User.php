@@ -33,20 +33,28 @@ class User extends Authenticatable
         ];
     }
 
-    public function carts(){
+    public function carts()
+    {
         return $this->hasMany(Cart::class);
     }
-    public function inventoryMovements(){
+
+    public function inventoryMovements()
+    {
         return $this->hasMany(InventoryMovement::class, 'created_by');
     }
-    public function orders(){
+
+    public function orders()
+    {
         return $this->hasMany(Order::class);
     }
-    public function refunds(){
+
+    public function refunds()
+    {
         return $this->hasMany(Refund::class, 'created_by');
     }
-    public function addresses(){
+
+    public function addresses()
+    {
         return $this->hasMany(Address::class);
     }
-
 }

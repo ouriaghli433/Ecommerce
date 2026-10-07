@@ -6,15 +6,16 @@ use Illuminate\Database\Eloquent\Model;
 
 class Address extends Model
 {
-    protected $fillable =[
+    protected $fillable = [
         'full_name',
         'phone',
         'address_line',
         'city',
         'postal_code',
         'country',
-        'is_default'
+        'is_default',
     ];
+
     protected function casts(): array
     {
         return [
@@ -22,11 +23,13 @@ class Address extends Model
         ];
     }
 
-    public function user(){
+    public function user()
+    {
         return $this->belongsTo(User::class);
     }
-    public function orders(){
+
+    public function orders()
+    {
         return $this->hasMany(Order::class, 'shipping_address_id');
     }
-
 }

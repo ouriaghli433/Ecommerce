@@ -6,44 +6,59 @@ use Illuminate\Database\Eloquent\Model;
 
 class Product extends Model
 {
-    protected $fillable =[
+    protected $fillable = [
         'name',
         'slug',
         'sku',
         'price',
         'description',
         'is_active',
-        'attributes'
+        'attributes',
     ];
+
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
-            'attributes' => 'array'
+            'attributes' => 'array',
         ];
     }
-    public function category(){
+
+    public function category()
+    {
         return $this->belongsTo(Category::class);
     }
-    public function inventory(){
+
+    public function inventory()
+    {
         return $this->hasOne(Inventory::class);
     }
-    public function inventoryMovements(){
+
+    public function inventoryMovements()
+    {
         return $this->hasMany(InventoryMovement::class);
     }
-    public function images(){
+
+    public function images()
+    {
         return $this->hasMany(ProductImage::class);
     }
-    public function carts(){
+
+    public function carts()
+    {
         return $this->belongsToMany(Cart::class, 'cart_lines'); // pivot table name
     }
-    public function cartLines(){
+
+    public function cartLines()
+    {
         return $this->hasMany(CartLine::class);
     }
+
     public function orders()
     {
         return $this->belongsToMany(Order::class, 'order_lines');
     }
+
     public function orderLines()
     {
         return $this->hasMany(OrderLine::class);
