@@ -2,11 +2,12 @@
 
 namespace Database\Factories;
 
+use App\Models\Cart;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Cart>
+ * @extends Factory<Cart>
  */
 class CartFactory extends Factory
 {
@@ -19,7 +20,7 @@ class CartFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'status' => fake()->randomElement(['active','abandoned','converted']),
+            'status' => fake()->randomElement(['active', 'abandoned', 'converted']),
         ];
     }
 }

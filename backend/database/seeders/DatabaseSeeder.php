@@ -7,15 +7,15 @@ use App\Models\Cart;
 use App\Models\CartLine;
 use App\Models\Category;
 use App\Models\Coupon;
-use App\Models\Product;
-use App\Models\User;
-use App\Models\ProductImage;
 use App\Models\Inventory;
 use App\Models\InventoryMovement;
 use App\Models\Order;
 use App\Models\OrderLine;
 use App\Models\Payment;
+use App\Models\Product;
+use App\Models\ProductImage;
 use App\Models\Refund;
+use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 

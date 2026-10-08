@@ -3,10 +3,11 @@
 namespace Database\Factories;
 
 use App\Models\Product;
+use App\Models\ProductImage;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\ProductImage>
+ * @extends Factory<ProductImage>
  */
 class ProductImageFactory extends Factory
 {
@@ -18,11 +19,11 @@ class ProductImageFactory extends Factory
     public function definition(): array
     {
         return [
-        'image_url' => fake()->imageUrl(),
-        'alt_text' => fake()->sentence(3),
-        'display_order' => fake()->numberBetween(0, 5),
-        'is_primary' => false,
-        'product_id' => Product::factory(),
-    ];
+            'image_url' => fake()->imageUrl(),
+            'alt_text' => fake()->sentence(3),
+            'display_order' => fake()->numberBetween(0, 5),
+            'is_primary' => false,
+            'product_id' => Product::factory(),
+        ];
     }
 }

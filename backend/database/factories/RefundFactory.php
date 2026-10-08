@@ -3,10 +3,11 @@
 namespace Database\Factories;
 
 use App\Models\Payment;
+use App\Models\Refund;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Refund>
+ * @extends Factory<Refund>
  */
 class RefundFactory extends Factory
 {

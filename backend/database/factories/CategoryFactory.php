@@ -6,7 +6,7 @@ use App\Models\Category;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Category>
+ * @extends Factory<Category>
  */
 class CategoryFactory extends Factory
 {
@@ -18,17 +18,18 @@ class CategoryFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->words(1,true),
-            'slug'=> fake()->unique()->slug(),
+            'name' => fake()->words(1, true),
+            'slug' => fake()->unique()->slug(),
             'description' => fake()->sentence(),
             'is_active' => true,
-            'parent_id' => null
+            'parent_id' => null,
         ];
     }
+
     public function child(Category $parent): static
     {
         return $this->state(fn () => [
-        'parent_id' => $parent->id,
+            'parent_id' => $parent->id,
         ]);
     }
 }
