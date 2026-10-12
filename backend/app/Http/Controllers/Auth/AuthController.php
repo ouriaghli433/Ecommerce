@@ -3,19 +3,16 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    public function register(Request $request){
-        $validated = $request->validate([
-            'first_name' => 'required|string|max:50',
-            'last_name' => 'required|string|max:50',
-            'email' => 'required|email|unique:users,email',
-            'password' => 'required|string|confirmed|min:8',
-        ]);
+    public function register(RegisterRequest $request){
+        $validated = $request->validated();
         $first_name = $validated['first_name'];
         $last_name = $validated['last_name'];
         $email = $validated['email'];
@@ -28,17 +25,42 @@ class AuthController extends Controller
         ]);
         $token = $user->createToken('access-token')->plainTextToken;
         return response()->json([
-            'costumer' => $user,
+            'customer' => $user,
             'token' => $token
         ],201);
     }
-    public function login(){
+    public function login(LoginRequest $request){
+        $validated = $request->validated();
+        $user = User::where('email', $validated['email'])->first();
+
+        if(!$user){
+            return response()->json([
+                'message' => 'email or password is incorrect',
+            ],401); 
+        }
+        if(!Hash::check($validated['password'], $user->password)){
+            return response()->json([
+                'message' => 'email or password is incorrect',
+            ],401); 
+        }
+        $token = $user->createToken('access-token')->plainTextToken;
+        return response()->json([
+            'user' => $user,
+            'token' => $token
+        ],200);
+    }
+    public function me(Request $request){
+        $user = $request->user();
+        return response()->json([
+            'user' => $user,
+        ],200);
         
     }
-    public function me(){
-        
-    }
-    public function logout(){
-        
+    public function logout(Request $request){
+        $user  = $request->user();
+        $user->currentAccessToken()->delete();
+        return response()->json([
+            'message' => 'logout succesfully'
+        ]);
     }
 }
