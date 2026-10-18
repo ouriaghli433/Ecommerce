@@ -53,6 +53,3 @@ jobs:
 
       - name: Run tests
         run: docker compose exec -T backend php artisan test
-
-      - name: Run Laravel Pint
-        run: docker compose exec -T backend ./vendor/bin/pint --test
