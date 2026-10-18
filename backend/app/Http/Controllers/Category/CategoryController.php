@@ -6,38 +6,50 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Category\StoreCategoryRequest;
 use App\Http\Requests\Category\UpdateCategoryRequest;
 use App\Models\Category;
-use Illuminate\Http\Request;
 
 class CategoryController extends Controller
 {
-    public function index(){
+    public function index()
+    {
         $categories = Category::all();
+
         return response()->json([
             'categories' => $categories,
         ], 200);
     }
-    public function store(StoreCategoryRequest $request){
+
+    public function store(StoreCategoryRequest $request)
+    {
         $attributes = $request->validated();
-        $category= Category::create($attributes);
+        $category = Category::create($attributes);
+
         return response()->json([
             'category' => $category,
         ], 201);
     }
-    public function show(Category $category){
-        
+
+    public function show(Category $category)
+    {
+
         return response()->json([
             'category' => $category,
         ], 200);
     }
-    public function update(UpdateCategoryRequest $request , Category $category){
+
+    public function update(UpdateCategoryRequest $request, Category $category)
+    {
         $attributes = $request->validated();
         $category->update($attributes);
+
         return response()->json([
             'category' => $category,
         ], 200);
     }
-    public function destroy(Category $category){
+
+    public function destroy(Category $category)
+    {
         $category->delete();
+
         return response()->json([
             'message' => 'Succesfully deleted!',
         ], 200);

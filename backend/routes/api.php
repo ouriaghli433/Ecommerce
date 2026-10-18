@@ -17,7 +17,7 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // Authenticated Admin
-Route::middleware(['auth:sanctum','role:admin'])->group(function(){
+Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::post('/category', [CategoryController::class, 'store']);
     Route::put('/category/{category}', [CategoryController::class, 'update']);
     Route::delete('/category/{category}', [CategoryController::class, 'destroy']);
