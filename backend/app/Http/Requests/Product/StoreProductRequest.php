@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Product;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreProductRequest extends FormRequest
@@ -17,7 +18,7 @@ class StoreProductRequest extends FormRequest
     /**
      * Get the validation rules that apply to the request.
      *
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
@@ -29,7 +30,7 @@ class StoreProductRequest extends FormRequest
             'description' => 'nullable|string',
             'is_active' => 'required|boolean',
             'attributes' => 'nullable|json',
-            'category_id' => 'required|uuid|exists:categories,id'
+            'category_id' => 'required|uuid|exists:categories,id',
         ];
     }
 }
