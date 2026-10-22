@@ -16,6 +16,7 @@ class InventoryMovement extends Model
         'reason',
         'reference_type',
         'reference_id',
+        'created_by'
     ];
 
     public function inventory()
