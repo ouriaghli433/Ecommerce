@@ -6,7 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class ProductTests extends TestCase
@@ -15,10 +15,11 @@ class ProductTests extends TestCase
      * A basic feature test example.
      */
     use RefreshDatabase;
+
     public function test_admin_can_create_product(): void
     {
         $admin = User::factory()->create([
-            'role' => 'admin'
+            'role' => 'admin',
         ]);
         $category = Category::factory()->create();
         $product = [
@@ -35,13 +36,14 @@ class ProductTests extends TestCase
             'category_id' => $category->id,
         ];
         $response = $this->actingAs($admin, 'sanctum')
-            ->postJson("/api/product", $product);
+            ->postJson('/api/product', $product);
         $response->assertCreated();
     }
+
     public function test_admin_can_update_product(): void
     {
         $admin = User::factory()->create([
-            'role' => 'admin'
+            'role' => 'admin',
         ]);
         $category = Category::factory()->create();
         $pr = Product::factory()->create([
@@ -63,33 +65,38 @@ class ProductTests extends TestCase
         $response = $this->actingAs($admin, 'sanctum')
             ->putJson("/api/product/$pr->id", $product);
         $response->assertOk();
-        $this->assertDatabaseHas('products',[
+        $this->assertDatabaseHas('products', [
             'id' => $pr->id,
             'name' => 'Updated product',
             'sku' => 'update-sku',
         ]);
     }
-    public function test_admin_can_delete_product():void {
+
+    public function test_admin_can_delete_product(): void
+    {
         $admin = User::factory()->create([
-            'role' => 'admin'
+            'role' => 'admin',
         ]);
 
         $product = Product::factory()->create();
 
-        $response =  $this->actingAs($admin, 'sanctum')
+        $response = $this->actingAs($admin, 'sanctum')
             ->delete("/api/product/$product->id");
         $response->assertOk();
-        $this->assertDatabaseMissing('products',[
-            'id' => $product->id
+        $this->assertDatabaseMissing('products', [
+            'id' => $product->id,
         ]);
     }
-    public function test_guest_can_view_products(): void{
+
+    public function test_guest_can_view_products(): void
+    {
         $products = Product::factory()->count(5)->create();
 
-        $response = $this->getJson("/api/product");
-        $response->assertOk()->assertJsonCount(5,'products');
+        $response = $this->getJson('/api/product');
+        $response->assertOk()->assertJsonCount(5, 'products');
         $this->assertDatabaseCount('products', 5);
     }
+
     public function test_guest_can_view_a_single_product(): void
     {
         $product = Product::factory()->create();
@@ -99,11 +106,13 @@ class ProductTests extends TestCase
         $response->assertOk()
             ->assertJsonPath('product.id', $product->id);
     }
+
     public function test_viewnig_nonexistent_product_return_404(): void
     {
-        $response = $this->getJson("/api/product/" . \Illuminate\Support\Str::uuid());
+        $response = $this->getJson('/api/product/'.Str::uuid());
         $response->assertNotFound();
     }
+
     public function test_guest_cannot_create_product(): void
     {
         $category = Category::factory()->create();

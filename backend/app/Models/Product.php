@@ -18,7 +18,7 @@ class Product extends Model
         'description',
         'is_active',
         'attributes',
-        'category_id'
+        'category_id',
     ];
 
     protected function casts(): array

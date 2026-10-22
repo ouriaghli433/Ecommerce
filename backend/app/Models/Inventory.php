@@ -11,6 +11,7 @@ class Inventory extends Model
     use HasFactory, HasUuids;
 
     protected $fillable = [
+        'product_id',
         'on_hand',
         'reserved',
     ];
