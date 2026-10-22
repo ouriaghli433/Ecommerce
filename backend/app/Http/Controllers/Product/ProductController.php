@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Product\StoreProductRequest;
 use App\Http\Requests\Product\UpdateProductRequest;
 use App\Models\Product;
-use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
@@ -18,7 +18,7 @@ class ProductController extends Controller
         $products = Product::all();
 
         return response()->json([
-            'products' => $products
+            'products' => $products,
         ]);
     }
 
@@ -29,11 +29,21 @@ class ProductController extends Controller
     {
         $data = $request->validated();
 
-        $product = Product::create($data);
+        return DB::transaction(function() use ($data){
 
-        return response()->json([
-            'product' => $product
-        ],201);
+            $product = Product::create($data);
+
+            $product->inventory()->create([
+                'on_hand' => 0,
+                'reserved' => 0
+            ]);
+
+            $product->load('inventory');
+
+            return response()->json([
+                'product' => $product,
+            ], 201);
+        });
     }
 
     /**
@@ -42,7 +52,7 @@ class ProductController extends Controller
     public function show(Product $product)
     {
         return response()->json([
-            'product' => $product
+            'product' => $product,
         ]);
     }
 
@@ -53,8 +63,9 @@ class ProductController extends Controller
     {
         $data = $request->validated();
         $product->update($data);
+
         return response()->json([
-            'product' => $product
+            'product' => $product,
         ]);
     }
 
@@ -64,8 +75,9 @@ class ProductController extends Controller
     public function destroy(Product $product)
     {
         $product->delete();
+
         return response()->json([
-            'message' => 'Successfully deleted!'
+            'message' => 'Successfully deleted!',
         ]);
     }
 }
