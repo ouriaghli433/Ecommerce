@@ -13,6 +13,8 @@ class CartLine extends Model
     protected $fillable = [
         'quantity',
         'unit_price',
+        'cart_id',
+        'product_id'
     ];
 
     public function cart()
