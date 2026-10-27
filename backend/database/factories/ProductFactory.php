@@ -32,4 +32,13 @@ class ProductFactory extends Factory
             'category_id' => Category::factory(),
         ];
     }
+    public function configure(): static
+    {
+        return $this->afterCreating(function (Product $product) {
+            $product->inventory()->create([
+                'on_hand' => 10,
+                'reserved' => 0,
+            ]);
+        });
+    }
 }

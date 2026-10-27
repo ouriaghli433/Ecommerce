@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Cart\CartController;
 use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Inventory\InventoryController;
 use App\Http\Controllers\Inventory\InventoryMovementController;
@@ -8,15 +9,20 @@ use App\Http\Controllers\Product\ProductController;
 use Illuminate\Support\Facades\Route;
 
 // Public
-// Auth
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-// Category
-Route::get('/category', [CategoryController::class, 'index']);
-Route::get('/category/{category}', [CategoryController::class, 'show']);
-// Product
-Route::get('/product', [ProductController::class, 'index']);
-Route::get('/product/{product}', [ProductController::class, 'show']);
+    // Auth
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+    // Category
+    Route::get('/category', [CategoryController::class, 'index']);
+    Route::get('/category/{category}', [CategoryController::class, 'show']);
+    // Product
+    Route::get('/product', [ProductController::class, 'index']);
+    Route::get('/product/{product}', [ProductController::class, 'show']);
+    // Cart
+    Route::get('/cart', [CartController::class, 'show']);
+    Route::post('/cart', [CartController::class, 'store']);
+    Route::patch('/cart/{cartLineId}', [CartController::class, 'update']);
+    Route::delete('/cart/{cartLineId}', [CartController::class, 'destroy']);
 
 // Authenticated
 Route::middleware('auth:sanctum')->group(function () {
@@ -24,7 +30,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
 });
 
-// Authenticated Admin
+// Authenticated:Admin
 Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     // Category
     Route::post('/category', [CategoryController::class, 'store']);
