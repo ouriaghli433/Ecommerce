@@ -11,6 +11,8 @@ class OrderLine extends Model
     use HasFactory, HasUuids;
 
     protected $fillable = [
+        'product_id',
+        'order_id',
         'quantity',
         'unit_price',
     ];
