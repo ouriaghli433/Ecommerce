@@ -15,6 +15,7 @@ use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductImage;
 use App\Models\Refund;
+use App\Models\shippingPrice;
 use App\Models\User;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -43,5 +44,6 @@ class DatabaseSeeder extends Seeder
         OrderLine::factory()->count(10)->create();
         Payment::factory()->count(5)->create();
         Refund::factory()->count(3)->create();
+        shippingPrice::factory()->count(20)->create();
     }
 }

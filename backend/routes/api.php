@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Cart\CartController;
 use App\Http\Controllers\Category\CategoryController;
+use App\Http\Controllers\Checkout\CheckoutController;
 use App\Http\Controllers\Inventory\InventoryController;
 use App\Http\Controllers\Inventory\InventoryMovementController;
 use App\Http\Controllers\Product\ProductController;
@@ -47,4 +48,12 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::get('/inventory-movement', [InventoryMovementController::class, 'index']);
     Route::post('/inventory-movement', [InventoryMovementController::class, 'store']);
     Route::get('/inventory-movement/{inventoryMovement}', [InventoryMovementController::class, 'show']);
+});
+
+// Authenticated:User
+Route::middleware(['auth:sanctum', 'role:customer'])->group(function () {
+    // Checkout
+    Route::post('/checkout-preview', [CheckoutController::class, 'preview']);
+    Route::post('/checkout-place-order', [CheckoutController::class, 'placeOrder']);
+
 });

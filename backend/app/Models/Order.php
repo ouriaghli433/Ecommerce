@@ -9,7 +9,24 @@ use Illuminate\Database\Eloquent\Model;
 class Order extends Model
 {
     use HasFactory, HasUuids;
-
+    protected $fillable = [
+        'user_id',
+        'coupon_id',
+        'shipping_address_id',
+        'status',
+        'subtotal',
+        'discount_amount',
+        'shipping_amount',
+        'tax_amount',
+        'total_amount',
+        'expires_at',
+        'shipping_full_name',
+        'shipping_phone',
+        'shipping_address_line',
+        'shipping_city',
+        'shipping_postal_code',
+        'shipping_country',
+    ];
     protected function casts(): array
     {
         return [
