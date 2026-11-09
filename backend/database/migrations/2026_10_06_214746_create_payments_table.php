@@ -13,13 +13,14 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->enum('status', ['pending', 'processing', 'succeeded', 'failed']);
+            $table->enum('status', ['pending', 'processing', 'succeeded', 'failed', 'expired']);
             $table->integer('amount');
             $table->string('currency');
             $table->string('provider');
-            $table->string('provider_ref')->unique();
+            $table->string('provider_ref')->unique()->nullable();
             $table->string('failure_reason')->nullable();
             $table->timestamp('succeeded_at')->nullable();
+            $table->timestamp('checkout_expires_at')->nullable();
             $table->foreignUuid('order_id')->constrained('orders')
                 ->restrictOnDelete()
                 ->cascadeOnUpdate();
