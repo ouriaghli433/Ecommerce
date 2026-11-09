@@ -6,6 +6,7 @@ use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Checkout\CheckoutController;
 use App\Http\Controllers\Inventory\InventoryController;
 use App\Http\Controllers\Inventory\InventoryMovementController;
+use App\Http\Controllers\Payment\PaymentController;
 use App\Http\Controllers\Product\ProductController;
 use Illuminate\Support\Facades\Route;
 
@@ -24,6 +25,11 @@ use Illuminate\Support\Facades\Route;
     Route::post('/cart', [CartController::class, 'store']);
     Route::patch('/cart/{cartLineId}', [CartController::class, 'update']);
     Route::delete('/cart/{cartLineId}', [CartController::class, 'destroy']);
+    // Paiment
+    Route::post('/stripe/webhook', [
+    PaymentController::class,
+    'handleWebhook',
+    ]);
 
 // Authenticated
 Route::middleware('auth:sanctum')->group(function () {
@@ -55,5 +61,7 @@ Route::middleware(['auth:sanctum', 'role:customer'])->group(function () {
     // Checkout
     Route::post('/checkout-preview', [CheckoutController::class, 'preview']);
     Route::post('/checkout-place-order', [CheckoutController::class, 'placeOrder']);
+    // Paiment 
+    Route::post('/payments/checkout', [PaymentController::class,'createCheckoutSession',]);
 
 });
