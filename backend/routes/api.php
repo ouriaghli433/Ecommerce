@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Cart\CartController;
 use App\Http\Controllers\Category\CategoryController;
 use App\Http\Controllers\Checkout\CheckoutController;
+use App\Http\Controllers\Coupon\CouponController;
 use App\Http\Controllers\Inventory\InventoryController;
 use App\Http\Controllers\Inventory\InventoryMovementController;
 use App\Http\Controllers\Payment\PaymentController;
@@ -66,4 +67,7 @@ Route::middleware(['auth:sanctum', 'role:customer'])->group(function () {
     Route::post('/payments/checkout', [PaymentController::class,'createCheckoutSession',]);
     // Addresses
     Route::apiResource('addresses', AddressController::class);
+    // Coupon 
+    // Coupons
+    Route::apiResource('coupons', CouponController::class);
 });
