@@ -24,11 +24,12 @@ class InventoryMovementController extends Controller
         return response()->json($inventoryMovement);
     }
      
+        
     public function store(Request $request, InventoryService $service)
     {
         $data = $request->validate([
             'inventory_id' => 'required|uuid|exists:inventories,id',
-            'type' => 'required|in:purchase,return,damage,reservation,release,sale,adjustment',
+            'type' => 'required|in:purchase,return,damage,adjustment',
             'quantity' => 'required|integer',
             'reason' => 'nullable|string',
         ]);
@@ -36,7 +37,7 @@ class InventoryMovementController extends Controller
         if ($data['type'] === 'adjustment') {
             if ($data['quantity'] == 0) {
                 return response()->json([
-                    'message' => 'Adjustment quantity cannot be zero.',
+                    'message' => 'Quantity cannot be zero.',
                 ], 422);
             }
 
@@ -64,9 +65,11 @@ class InventoryMovementController extends Controller
         );
 
         return response()->json([
+            'message' => 'Inventory movement created successfully.',
             'movement' => $movement,
         ], 201);
     }
+
 
 
 }
