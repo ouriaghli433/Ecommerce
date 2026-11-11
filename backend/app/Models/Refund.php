@@ -11,6 +11,8 @@ class Refund extends Model
     use HasFactory, HasUuids;
 
     protected $fillable = [
+        'payment_id',
+        'created_by',
         'amount',
         'status',
         'reason',
