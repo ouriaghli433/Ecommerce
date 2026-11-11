@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Address\AddressController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Cart\CartController;
 use App\Http\Controllers\Category\CategoryController;
@@ -27,10 +28,7 @@ use Illuminate\Support\Facades\Route;
     Route::patch('/cart/{cartLineId}', [CartController::class, 'update']);
     Route::delete('/cart/{cartLineId}', [CartController::class, 'destroy']);
     // Paiment
-    Route::post('/stripe/webhook', [
-    PaymentController::class,
-    'handleWebhook',
-    ]);
+    Route::post('/stripe/webhook', [PaymentController::class,'handleWebhook',]);
 
 // Authenticated
 Route::middleware('auth:sanctum')->group(function () {
@@ -66,5 +64,6 @@ Route::middleware(['auth:sanctum', 'role:customer'])->group(function () {
     Route::post('/checkout-place-order', [CheckoutController::class, 'placeOrder']);
     // Paiment 
     Route::post('/payments/checkout', [PaymentController::class,'createCheckoutSession',]);
-
+    // Addresses
+    Route::apiResource('addresses', AddressController::class);
 });
