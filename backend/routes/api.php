@@ -13,6 +13,7 @@ use App\Http\Controllers\Payment\PaymentController;
 use App\Http\Controllers\Product\ProductController;
 use App\Http\Controllers\ProductImage\ProductImageController;
 use App\Http\Controllers\Refund\RefundController;
+use App\Http\Controllers\ShippingPrice\ShippingPriceController;
 use Illuminate\Support\Facades\Route;
 
 // Public
@@ -66,7 +67,8 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::get('/orders', [OrderController::class, 'index']);
     Route::get('/orders/{order}', [OrderController::class, 'show']);
     Route::patch('/orders/{order}/status', [OrderController::class, 'update']);
-    
+    // Shipping Prices
+    Route::apiResource('shipping-prices', ShippingPriceController::class);
     
     
 });
