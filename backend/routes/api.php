@@ -8,6 +8,7 @@ use App\Http\Controllers\Inventory\InventoryController;
 use App\Http\Controllers\Inventory\InventoryMovementController;
 use App\Http\Controllers\Payment\PaymentController;
 use App\Http\Controllers\Product\ProductController;
+use App\Http\Controllers\Refund\RefundController;
 use Illuminate\Support\Facades\Route;
 
 // Public
@@ -54,6 +55,8 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::get('/inventory-movement', [InventoryMovementController::class, 'index']);
     Route::post('/inventory-movement', [InventoryMovementController::class, 'store']);
     Route::get('/inventory-movement/{inventoryMovement}', [InventoryMovementController::class, 'show']);
+    // Refund
+    Route::post('/payments/{payment}/refund',[RefundController::class, 'store']);
 });
 
 // Authenticated:User
