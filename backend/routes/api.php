@@ -8,8 +8,10 @@ use App\Http\Controllers\Checkout\CheckoutController;
 use App\Http\Controllers\Coupon\CouponController;
 use App\Http\Controllers\Inventory\InventoryController;
 use App\Http\Controllers\Inventory\InventoryMovementController;
+use App\Http\Controllers\Order\OrderController;
 use App\Http\Controllers\Payment\PaymentController;
 use App\Http\Controllers\Product\ProductController;
+use App\Http\Controllers\ProductImage\ProductImageController;
 use App\Http\Controllers\Refund\RefundController;
 use Illuminate\Support\Facades\Route;
 
@@ -56,7 +58,19 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     Route::get('/inventory-movement/{inventoryMovement}', [InventoryMovementController::class, 'show']);
     // Refund
     Route::post('/payments/{payment}/refund',[RefundController::class, 'store']);
+    // Coupons
+    Route::apiResource('coupons', CouponController::class);
+    // Product Images
+    Route::apiResource('products.images',ProductImageController::class);
+    // Orders
+    Route::get('/orders', [OrderController::class, 'index']);
+    Route::get('/orders/{order}', [OrderController::class, 'show']);
+    Route::patch('/orders/{order}/status', [OrderController::class, 'update']);
+    
+    
+    
 });
+
 
 // Authenticated:User
 Route::middleware(['auth:sanctum', 'role:customer'])->group(function () {
@@ -67,7 +81,8 @@ Route::middleware(['auth:sanctum', 'role:customer'])->group(function () {
     Route::post('/payments/checkout', [PaymentController::class,'createCheckoutSession',]);
     // Addresses
     Route::apiResource('addresses', AddressController::class);
-    // Coupon 
-    // Coupons
-    Route::apiResource('coupons', CouponController::class);
+    // Orders
+    Route::get('/orders', [OrderController::class, 'index']);
+    Route::get('/orders/{order}', [OrderController::class, 'show']);
+    
 });
