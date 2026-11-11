@@ -23,23 +23,50 @@ class InventoryMovementController extends Controller
 
         return response()->json($inventoryMovement);
     }
-    public function store(Request $request, InventoryService $service){
+     
+    public function store(Request $request, InventoryService $service)
+    {
         $data = $request->validate([
-            'inventory_id' => ['required', 'uuid', 'exists:inventories,id'],
-            'type' => ['required', 'in:purchase,return,damage,reservation,release,sale'],
-            'quantity' => ['required', 'integer', 'min:1'],
-            'reason' => ['nullable', 'string'],
+            'inventory_id' => 'required|uuid|exists:inventories,id',
+            'type' => 'required|in:purchase,return,damage,reservation,release,sale,adjustment',
+            'quantity' => 'required|integer',
+            'reason' => 'nullable|string',
         ]);
+
+        if ($data['type'] === 'adjustment') {
+            if ($data['quantity'] == 0) {
+                return response()->json([
+                    'message' => 'Adjustment quantity cannot be zero.',
+                ], 422);
+            }
+
+            if (empty($data['reason'])) {
+                return response()->json([
+                    'message' => 'Reason is required for adjustment.',
+                ], 422);
+            }
+        } else {
+            if ($data['quantity'] <= 0) {
+                return response()->json([
+                    'message' => 'Quantity must be greater than zero.',
+                ], 422);
+            }
+        }
+
         $inventory = Inventory::findOrFail($data['inventory_id']);
+
         $movement = $service->recordMovement(
             $inventory,
             $data['type'],
             $data['quantity'],
-            $data['reason'],
-            createdBy:$request->user()->id
+            $data['reason'] ?? null,
+            createdBy: $request->user()->id
         );
+
         return response()->json([
-        'movement' => $movement,
-    ], 201);
+            'movement' => $movement,
+        ], 201);
     }
+
+
 }

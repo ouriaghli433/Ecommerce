@@ -66,6 +66,25 @@ class InventoryService
         string $type,
         int $quantity
     ): void {
+        // Adjustment can be positive or negative.
+        if ($type === 'adjustment') {
+            if ($quantity === 0) {
+                throw ValidationException::withMessages([
+                    'quantity' => 'Adjustment quantity cannot be zero.',
+                ]);
+            }
+
+            if ($inventory->on_hand + $quantity < $inventory->reserved) {
+                throw ValidationException::withMessages([
+                    'quantity' => 'Adjustment cannot reduce stock below reserved quantity.',
+                ]);
+            }
+
+            $inventory->on_hand += $quantity;
+
+            return;
+        }
+
         if ($quantity <= 0) {
             throw ValidationException::withMessages([
                 'quantity' => 'Quantity must be greater than 0',
@@ -104,11 +123,6 @@ class InventoryService
                 $inventory->reserved -= $quantity;
                 $inventory->on_hand -= $quantity;
                 break;
-
-            case 'adjustment' :
-                throw ValidationException::withMessages([
-                    'type' => 'Not defined yet',
-                ]);
 
             case 'reservation' :
                 if ($inventory->on_hand - $inventory->reserved < $quantity) {
