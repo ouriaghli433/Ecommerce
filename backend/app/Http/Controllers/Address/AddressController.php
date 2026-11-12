@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Address\StoreAddressRequest;
 use App\Http\Requests\Address\UpdateAddressRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AddressController extends Controller
 {
@@ -23,16 +24,35 @@ class AddressController extends Controller
     public function store(StoreAddressRequest $request)
     {
         $validated = $request->validated();
+        $user = $request->user();
 
-        if ($request->boolean('is_default')) {
-            $request->user()->addresses()->update([
-                'is_default' => false,
-            ]);
-        }
+        $address = DB::transaction(function () use ($user, $validated) {
 
-        $address = $request->user()
-            ->addresses()
-            ->create($validated);
+            // Lock user to prevent concurrent default-address changes
+            $user = $user->newQuery()
+                ->whereKey($user->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $addresses = $user->addresses();
+
+            $hasDefault = $addresses
+                ->where('is_default', true)
+                ->exists();
+
+            // First address automatically becomes default
+            $makeDefault = ($validated['is_default'] ?? false) || !$hasDefault;
+
+            if ($makeDefault) {
+                $addresses->update([
+                    'is_default' => false,
+                ]);
+            }
+
+            $validated['is_default'] = $makeDefault;
+
+            return $addresses->create($validated);
+        });
 
         return response()->json([
             'message' => 'Address created successfully.',
@@ -52,24 +72,50 @@ class AddressController extends Controller
     }
 
     public function update(
-        UpdateAddressRequest $request,
-        string $addressId
+    UpdateAddressRequest $request,
+    string $addressId
     ) {
-        $address = $request->user()
-            ->addresses()
-            ->findOrFail($addressId);
-
         $validated = $request->validated();
+        $user = $request->user();
 
-        if ($request->boolean('is_default')) {
-            $request->user()->addresses()
-                ->where('id', '!=', $address->id)
-                ->update([
-                    'is_default' => false,
-                ]);
-        }
+        $address = DB::transaction(function () use ($user, $addressId, $validated) {
 
-        $address->update($validated);
+            $user = $user->newQuery()
+                ->whereKey($user->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $addresses = $user->addresses();
+
+            $address = $addresses->findOrFail($addressId);
+
+            $makeDefault = $validated['is_default'] ?? $address->is_default;
+
+            if ($makeDefault) {
+
+                $addresses
+                    ->where('id', '!=', $address->id)
+                    ->update([
+                        'is_default' => false,
+                    ]);
+
+                $validated['is_default'] = true;
+
+            } else {
+
+                $otherDefaultExists = $addresses
+                    ->where('id', '!=', $address->id)
+                    ->where('is_default', true)
+                    ->exists();
+
+                // Never allow a user with addresses to have zero defaults
+                $validated['is_default'] = !$otherDefaultExists;
+            }
+
+            $address->update($validated);
+
+            return $address->fresh();
+        });
 
         return response()->json([
             'message' => 'Address updated successfully.',
@@ -83,13 +129,23 @@ class AddressController extends Controller
             ->addresses()
             ->findOrFail($addressId);
 
-        if ($address->orders()->exists()) {
-            return response()->json([
-                'message' => 'This address is linked to an order and cannot be deleted.',
-            ], 409);
-        }
+        $wasDefault = $address->is_default;
 
-        $address->delete();
+        DB::transaction(function () use ($request, $address, $wasDefault) {
+
+            $address->delete();
+
+            if ($wasDefault) {
+                $replacement = $request->user()
+                    ->addresses()
+                    ->orderBy('created_at')
+                    ->first();
+
+                $replacement?->update([
+                    'is_default' => true,
+                ]);
+            }
+        });
 
         return response()->json([
             'message' => 'Address deleted successfully.',

@@ -36,8 +36,12 @@ use Illuminate\Support\Facades\Route;
 
 // Authenticated
 Route::middleware('auth:sanctum')->group(function () {
+    // Auth
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    // Orders
+    Route::get('/orders', [OrderController::class, 'index']);
+    Route::get('/orders/{order}', [OrderController::class, 'show']);
 });
 
 // Authenticated:Admin
@@ -64,8 +68,6 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     // Product Images
     Route::apiResource('products.images',ProductImageController::class);
     // Orders
-    Route::get('/orders', [OrderController::class, 'index']);
-    Route::get('/orders/{order}', [OrderController::class, 'show']);
     Route::patch('/orders/{order}/status', [OrderController::class, 'update']);
     // Shipping Prices
     Route::apiResource('shipping-prices', ShippingPriceController::class);
