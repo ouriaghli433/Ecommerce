@@ -36,9 +36,7 @@ class InventoryService
             $movementQuantity = match ($type) {
                 'purchase', 'return', 'reservation' => $quantity,
                 'damage', 'sale', 'release' => -$quantity,
-                'adjustment' => throw ValidationException::withMessages([
-                    'type' => 'Adjustment requires a dedicated operation.',
-                ]),
+                'adjustment' => $quantity,
                 default => throw ValidationException::withMessages([
                     'type' => 'Unsupported movement type.',
                 ]),
