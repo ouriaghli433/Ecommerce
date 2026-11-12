@@ -19,6 +19,7 @@ class Order extends Model
         'shipping_amount',
         'tax_amount',
         'total_amount',
+        'paid_at',
         'expires_at',
         'shipping_full_name',
         'shipping_phone',
