@@ -6,17 +6,22 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Product\StoreProductRequest;
 use App\Http\Requests\Product\UpdateProductRequest;
 use App\Models\Product;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+
 
 class ProductController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::all();
-
+        $query = Product::query();
+        if(!$request->user() || $request->user()->role !== 'admin'){
+            $query->where('is_active' , true);
+        }
+        $products = $query->get();
         return response()->json([
             'products' => $products,
         ]);
@@ -49,8 +54,12 @@ class ProductController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Product $product)
+    public function show(Product $product, Request $request )
     {
+        if (!$product->is_active && $request->user()?->role !== 'admin') {
+            abort(404);
+        }
+
         return response()->json([
             'product' => $product,
         ]);
