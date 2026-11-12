@@ -5,13 +5,21 @@ namespace App\Http\Controllers\Order;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Order\UpdateOrderStatusRequest;
 use App\Models\Order;
+use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
     // Get all orders
-    public function index()
+    public function index(Request $request)
     {
-        $orders = Order::with('user')
+        $user = $request->user();
+
+        $query = Order::with('user');
+
+        if($user->role === 'customer'){
+            $query->where('user_id', $user->id);
+        }
+        $orders = $query
             ->latest()
             ->paginate(15);
 
@@ -19,14 +27,22 @@ class OrderController extends Controller
     }
 
     // Get order details
-    public function show(string $order)
+    public function show(Request $request, string $order)
     {
-        $order = Order::with([
+        $user = $request->user();
+
+        $query = Order::with([
             'user',
             'orderLines.product',
             'payments',
             'coupon',
-        ])->findOrFail($order);
+        ]);
+
+        if($user->role === 'customer'){
+            $query->where('user_id', $user->id);
+        }
+        
+        $order = $query->findOrFail($order);
 
         return response()->json($order);
     }
