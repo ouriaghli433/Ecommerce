@@ -90,7 +90,10 @@ class AuthController extends Controller
     {
         // Read the guest token from the request header.
         $guestToken = $request->header('X-Guest-Token');
-
+        
+        if (!$guestToken) {
+            return [null, null];
+        }
         // Find the guest's active cart 
         $cart = Cart::where('guest_token', $guestToken)
             ->where('status', 'active')
