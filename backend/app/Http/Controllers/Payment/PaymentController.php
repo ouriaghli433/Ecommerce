@@ -20,6 +20,7 @@ use Stripe\Stripe;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Stripe\Webhook;
+use App\Services\RefundService;
 use Stripe\Exception\SignatureVerificationException;
 use UnexpectedValueException;
 use Stripe\Exception\ApiConnectionException;
@@ -43,13 +44,26 @@ class PaymentController extends Controller
 
         $idempotencyKey = $request->header('Idempotency-Key');
 
-        if (!$idempotencyKey) {
+        if (
+            !is_string($idempotencyKey) ||
+            trim($idempotencyKey) === ''
+        ) {
             throw ValidationException::withMessages([
                 'Idempotency-Key' => [
                     'The Idempotency-Key header is required.',
                 ],
             ]);
         }
+
+        if (strlen($idempotencyKey) > 255) {
+            throw ValidationException::withMessages([
+                'Idempotency-Key' => [
+                    'The Idempotency-Key must not exceed 255 characters.',
+                ],
+            ]);
+        }
+
+        $idempotencyKey = trim($idempotencyKey);
 
         $endpoint = 'POST:/payments/checkout';
 
@@ -325,7 +339,7 @@ class PaymentController extends Controller
 
         return response()->json($body, 201);
     }
-    public function handleWebhook(Request $request, InventoryService $inventoryService)
+    public function handleWebhook(Request $request, InventoryService $inventoryService, RefundService $refundService)
     {
         $payload = $request->getContent();
         $signature = $request->header('Stripe-Signature');
@@ -365,11 +379,13 @@ class PaymentController extends Controller
             /*
             * Successful or completed Checkout Session.
             */
-            if ($event->type === 'checkout.session.completed') {
+            
+            if (in_array($event->type, [
+                'checkout.session.completed',
+                'checkout.session.async_payment_succeeded',
+            ], true)) {
                 $session = $event->data->object;
 
-                // The payment is not confirmed yet.
-                // We handle the event, but do not mark the payment as failed.
                 if ($session->payment_status !== 'paid') {
                     $webhookEvent->update([
                         'status' => 'processed',
@@ -382,7 +398,123 @@ class PaymentController extends Controller
                     ], 200);
                 }
 
-                DB::transaction(function () use ($session, $inventoryService) {
+                [$payment, $isLatePayment] = DB::transaction(
+                    function () use ($session, $inventoryService) {
+                        $payment = Payment::where('provider', 'stripe')
+                            ->where('provider_ref', $session->id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if ($payment === null) {
+                            throw new \RuntimeException(
+                                'No local payment found for Stripe Checkout Session.'
+                            );
+                        }
+
+                        $order = Order::where('id', $payment->order_id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if ($order === null) {
+                            throw new \RuntimeException(
+                                'No local order found for Stripe payment.'
+                            );
+                        }
+
+                        // Verify amount and currency.
+                        if (
+                            $session->amount_total !== $payment->amount ||
+                            strtolower($session->currency) !==
+                            strtolower($payment->currency)
+                        ) {
+                            throw new \RuntimeException(
+                                'Stripe payment amount or currency mismatch.'
+                            );
+                        }
+
+                        // Payment was already processed.
+                        if ($payment->status === 'succeeded') {
+                            return [
+                                $payment,
+                                $order->status === 'expired',
+                            ];
+                        }
+
+                        // The order expired before the payment was confirmed.
+                        // Do not sell inventory; refund the payment instead.
+                        if ($order->status === 'expired') {
+                            $payment->update([
+                                'status' => 'succeeded',
+                                'succeeded_at' => now(),
+                            ]);
+
+                            return [$payment, true];
+                        }
+
+                        if ($order->status !== 'pending_payment') {
+                            throw new \RuntimeException(
+                                'Order is not in pending_payment status.'
+                            );
+                        }
+
+                        foreach ($order->orderLines as $orderLine) {
+                            $inventory = Inventory::where(
+                                'product_id',
+                                $orderLine->product_id
+                            )
+                                ->lockForUpdate()
+                                ->first();
+
+                            if (! $inventory) {
+                                throw new \RuntimeException(
+                                    "No inventory found for product {$orderLine->product_id}."
+                                );
+                            }
+
+                            $inventoryService->recordMovement(
+                                inventory: $inventory,
+                                type: 'sale',
+                                quantity: $orderLine->quantity,
+                                reason: 'Paid order',
+                                referenceType: 'order',
+                                referenceId: $order->id,
+                            );
+                        }
+
+                        $payment->update([
+                            'status' => 'succeeded',
+                            'succeeded_at' => now(),
+                        ]);
+
+                        $order->update([
+                            'status' => 'paid',
+                            'paid_at' => now(),
+                        ]);
+
+                        return [$payment, false];
+                    }
+                );
+
+                // Late payment: issue a full refund outside the DB transaction.
+                if ($isLatePayment) {
+                    $refund = $refundService->create(
+                        $payment,
+                        null,
+                        'late_payment'
+                    );
+
+                    if ($refund->status === 'failed') {
+                        throw new \RuntimeException(
+                            'Late payment refund failed and requires manual review.'
+                        );
+                    }
+                }
+            }
+
+            elseif ($event->type === 'checkout.session.expired') {
+                $session = $event->data->object;
+
+                DB::transaction(function () use ($session) {
                     $payment = Payment::where('provider', 'stripe')
                         ->where('provider_ref', $session->id)
                         ->lockForUpdate()
@@ -390,78 +522,21 @@ class PaymentController extends Controller
 
                     if ($payment === null) {
                         throw new \RuntimeException(
-                            'No local payment found for Stripe Checkout Session.'
+                            'No local payment found for expired Stripe Checkout Session.'
                         );
                     }
 
-                    // Idempotency: payment was already completed.
+                    // Never overwrite a successful payment.
                     if ($payment->status === 'succeeded') {
                         return;
                     }
 
-                    $order = Order::where('id', $payment->order_id)
-                        ->lockForUpdate()
-                        ->first();
-
-                    if ($order === null) {
-                        throw new \RuntimeException(
-                            'No local order found for Stripe payment.'
-                        );
-                    }
-
-                    // Verify amount and currency.
-                    if (
-                        $session->amount_total !== $payment->amount ||
-                        strtolower($session->currency) !==
-                        strtolower($payment->currency)
-                    ) {
-                        throw new \RuntimeException(
-                            'Stripe payment amount or currency mismatch.'
-                        );
-                    }
-
-                    // Do not update an order that is no longer payable.
-                    if ($order->status !== 'pending_payment') {
-                        throw new \RuntimeException(
-                            'Order is not in pending_payment status.'
-                        );
-                    }
-
-                    
-                    foreach ($order->orderLines as $orderLine) {
-                        $inventory = Inventory::where(
-                            'product_id',
-                            $orderLine->product_id
-                        )
-                            ->lockForUpdate()
-                            ->first();
-
-                        if (! $inventory) {
-                            throw new \RuntimeException(
-                                "No inventory found for product {$orderLine->product_id}."
-                            );
-                        }
-
-                        $inventoryService->recordMovement(
-                            inventory: $inventory,
-                            type: 'sale',
-                            quantity: $orderLine->quantity,
-                            reason: 'Paid order',
-                            referenceType: 'order',
-                            referenceId: $order->id,
-                        );
-                    }
                     $payment->update([
-                        'status' => 'succeeded',
-                        'succeeded_at' => now(),
-                    ]);
-                    $order->update([
-                        'status' => 'paid',
-                        'paid_at' => now(),
+                        'status' => 'expired',
+                        'failure_reason' => 'Stripe Checkout Session expired.',
                     ]);
                 });
             }
-
             /*
             * Asynchronous payment failed.
             * Stripe sends this event when a delayed payment method fails.

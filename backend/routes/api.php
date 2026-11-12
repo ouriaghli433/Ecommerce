@@ -85,8 +85,6 @@ Route::middleware(['auth:sanctum', 'role:customer'])->group(function () {
     Route::post('/payments/checkout', [PaymentController::class,'createCheckoutSession',]);
     // Addresses
     Route::apiResource('addresses', AddressController::class);
-    // Orders
-    Route::get('/orders', [OrderController::class, 'index']);
-    Route::get('/orders/{order}', [OrderController::class, 'show']);
+    
     
 });
