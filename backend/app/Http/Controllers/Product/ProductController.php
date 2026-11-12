@@ -83,10 +83,13 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
-        $product->delete();
+        $product->update([
+            'is_active' => false,
+        ]);
 
         return response()->json([
-            'message' => 'Successfully deleted!',
+            'message' => 'Product archived successfully.',
+            'product' => $product,
         ]);
     }
 }
