@@ -105,6 +105,45 @@ class InventoryMovementTest extends TestCase
             'quantity' => -3,
         ]);
     }
+    public function test_duplicate_order_sale_does_not_decrease_inventory_twice(): void
+    {
+        $product = Product::factory()->create();
 
+        $inventory = Inventory::create([
+            'product_id' => $product->id,
+            'on_hand' => 10,
+            'reserved' => 5,
+        ]);
+
+        $service = app(InventoryService::class);
+
+        $firstMovement = $service->recordMovement(
+            inventory: $inventory,
+            type: 'sale',
+            quantity: 2,
+            reason: 'Paid order',
+            referenceType: 'order',
+            referenceId: (string) \Illuminate\Support\Str::uuid(),
+        );
+
+        $secondMovement = $service->recordMovement(
+            inventory: $inventory,
+            type: 'sale',
+            quantity: 2,
+            reason: 'Paid order',
+            referenceType: 'order',
+            referenceId: $firstMovement->reference_id,
+        );
+
+        $this->assertSame($firstMovement->id, $secondMovement->id);
+
+        $this->assertDatabaseHas('inventories', [
+            'id' => $inventory->id,
+            'on_hand' => 8,
+            'reserved' => 3,
+        ]);
+
+        $this->assertDatabaseCount('inventory_movements', 1);
+    }
 
 }
