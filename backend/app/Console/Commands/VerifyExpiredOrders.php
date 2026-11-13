@@ -43,14 +43,12 @@ class VerifyExpiredOrders extends Command
             ->get();
 
         $paidPaymentId = null;
-        $paidPaymentAlreadyRecorded = false;
         $allSessionsExpired = true;
 
         foreach ($payments as $payment) {
             // A locally successful payment must never be expired.
             if ($payment->status === 'succeeded') {
                 $paidPaymentId = $payment->id;
-                $paidPaymentAlreadyRecorded = true;
                 break;
             }
 
@@ -106,9 +104,7 @@ class VerifyExpiredOrders extends Command
         try {
             DB::transaction(function () use (
                 $order,
-                $payments,
                 $paidPaymentId,
-                $paidPaymentAlreadyRecorded,
                 $allSessionsExpired,
                 $inventoryService
             ) {
@@ -136,15 +132,10 @@ class VerifyExpiredOrders extends Command
                 );
 
                 if ($successfulPayment) {
-                    $lockedOrder->update([
-                        'status' => 'paid',
-                        'paid_at' => $lockedOrder->paid_at ?? now(),
-                    ]);
-
-                    return;
+                    $paidPaymentId = $successfulPayment->id;
                 }
 
-                // Stripe confirmed a successful payment.
+                // Stripe or the webhook confirmed a successful payment.
                 if ($paidPaymentId !== null) {
                     $payment = $lockedPayments->firstWhere(
                         'id',
@@ -157,32 +148,34 @@ class VerifyExpiredOrders extends Command
                         );
                     }
 
-                    // If the webhook did not process it, convert reservations to sales.
-                    if (! $paidPaymentAlreadyRecorded) {
-                        foreach ($lockedOrder->orderLines as $orderLine) {
-                            $inventory = Inventory::where(
-                                'product_id',
-                                $orderLine->product_id
-                            )
-                                ->lockForUpdate()
-                                ->first();
+                    // Always ensure sale movements exist.
+                    // InventoryService prevents duplicate stock deductions.
+                    foreach ($lockedOrder->orderLines as $orderLine) {
+                        $inventory = Inventory::where(
+                            'product_id',
+                            $orderLine->product_id
+                        )
+                            ->lockForUpdate()
+                            ->first();
 
-                            if (! $inventory) {
-                                throw new \RuntimeException(
-                                    "No inventory found for product {$orderLine->product_id}."
-                                );
-                            }
-
-                            $inventoryService->recordMovement(
-                                inventory: $inventory,
-                                type: 'sale',
-                                quantity: $orderLine->quantity,
-                                reason: 'Paid order verified by scheduler',
-                                referenceType: 'order',
-                                referenceId: $lockedOrder->id,
+                        if (! $inventory) {
+                            throw new \RuntimeException(
+                                "No inventory found for product {$orderLine->product_id}."
                             );
                         }
 
+                        $inventoryService->recordMovement(
+                            inventory: $inventory,
+                            type: 'sale',
+                            quantity: $orderLine->quantity,
+                            reason: 'Paid order verified by scheduler',
+                            referenceType: 'order',
+                            referenceId: $lockedOrder->id,
+                        );
+                    }
+
+                    // Do not overwrite an already successful payment.
+                    if ($payment->status !== 'succeeded') {
                         $payment->update([
                             'status' => 'succeeded',
                             'succeeded_at' => now(),
@@ -191,7 +184,7 @@ class VerifyExpiredOrders extends Command
 
                     $lockedOrder->update([
                         'status' => 'paid',
-                        'paid_at' => now(),
+                        'paid_at' => $lockedOrder->paid_at ?? now(),
                     ]);
 
                     return;
