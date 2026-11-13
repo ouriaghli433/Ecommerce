@@ -339,13 +339,16 @@ class PaymentController extends Controller
 
         return response()->json($body, 201);
     }
-    public function handleWebhook(Request $request, InventoryService $inventoryService, RefundService $refundService)
-    {
+    
+    public function handleWebhook(
+        Request $request,
+        InventoryService $inventoryService,
+        RefundService $refundService
+    ) {
         $payload = $request->getContent();
         $signature = $request->header('Stripe-Signature');
         $webhookSecret = config('services.stripe.webhook_secret');
 
-        // Verify Stripe signature and parse the event.
         try {
             $event = Webhook::constructEvent(
                 $payload,
@@ -358,7 +361,6 @@ class PaymentController extends Controller
             ], 400);
         }
 
-        // Register the verified event.
         $webhookEvent = WebhookEvent::firstOrCreate(
             ['event_id' => $event->id],
             [
@@ -368,7 +370,6 @@ class PaymentController extends Controller
             ]
         );
 
-        // Do not process an event that was already completed.
         if ($webhookEvent->status === 'processed') {
             return response()->json([
                 'message' => 'Event already processed.',
@@ -376,10 +377,6 @@ class PaymentController extends Controller
         }
 
         try {
-            /*
-            * Successful or completed Checkout Session.
-            */
-            
             if (in_array($event->type, [
                 'checkout.session.completed',
                 'checkout.session.async_payment_succeeded',
@@ -398,65 +395,112 @@ class PaymentController extends Controller
                     ], 200);
                 }
 
-                [$payment, $isLatePayment] = DB::transaction(
+                [$payment, $refundReason] = DB::transaction(
                     function () use ($session, $inventoryService) {
                         $payment = Payment::where('provider', 'stripe')
                             ->where('provider_ref', $session->id)
                             ->lockForUpdate()
                             ->first();
 
-                        if ($payment === null) {
+                        if (! $payment) {
                             throw new \RuntimeException(
                                 'No local payment found for Stripe Checkout Session.'
                             );
                         }
 
-                        $order = Order::where('id', $payment->order_id)
+                        $order = Order::whereKey($payment->order_id)
                             ->lockForUpdate()
                             ->first();
 
-                        if ($order === null) {
+                        if (! $order) {
                             throw new \RuntimeException(
                                 'No local order found for Stripe payment.'
                             );
                         }
 
-                        // Verify amount and currency.
                         if (
                             $session->amount_total !== $payment->amount ||
-                            strtolower($session->currency) !==
-                            strtolower($payment->currency)
+                            strtolower($session->currency) !== strtolower($payment->currency)
                         ) {
                             throw new \RuntimeException(
                                 'Stripe payment amount or currency mismatch.'
                             );
                         }
 
-                        // Payment was already processed.
-                        if ($payment->status === 'succeeded') {
-                            return [
-                                $payment,
-                                $order->status === 'expired',
-                            ];
+                        // Determine whether this payment requires a refund.
+                        $refundReason = null;
+
+                        if ($order->status === 'cancelled') {
+                            $refundReason = 'order_cancelled';
+                        } elseif (
+                            $order->status === 'expired' ||
+                            (
+                                $order->status === 'pending_payment' &&
+                                $order->expires_at &&
+                                $order->expires_at->isPast()
+                            )
+                        ) {
+                            $refundReason = 'late_payment';
                         }
 
-                        // The order expired before the payment was confirmed.
-                        // Do not sell inventory; refund the payment instead.
-                        if ($order->status === 'expired') {
-                            $payment->update([
-                                'status' => 'succeeded',
-                                'succeeded_at' => now(),
-                            ]);
+                        // Payment was already successful.
+                        if ($payment->status === 'succeeded') {
+                            return [$payment, $refundReason];
+                        }
 
-                            return [$payment, true];
+                        // Record successful payment.
+                        $payment->update([
+                            'status' => 'succeeded',
+                            'succeeded_at' => now(),
+                        ]);
+
+                        // Cancelled or expired orders must be refunded.
+                        if ($refundReason !== null) {
+                            // Release reservation only if the order is still pending.
+                            if ($order->status === 'pending_payment') {
+                                foreach ($order->orderLines as $orderLine) {
+                                    $inventory = Inventory::where(
+                                        'product_id',
+                                        $orderLine->product_id
+                                    )
+                                        ->lockForUpdate()
+                                        ->first();
+
+                                    if (! $inventory) {
+                                        throw new \RuntimeException(
+                                            "No inventory found for product {$orderLine->product_id}."
+                                        );
+                                    }
+
+                                    $inventoryService->recordMovement(
+                                        inventory: $inventory,
+                                        type: 'release',
+                                        quantity: $orderLine->quantity,
+                                        reason: 'Late payment - reservation released',
+                                        referenceType: 'order',
+                                        referenceId: $order->id,
+                                    );
+                                }
+
+                                $order->update([
+                                    'status' => 'expired',
+                                ]);
+                            }
+
+                            return [$payment, $refundReason];
+                        }
+
+                        if ($order->status === 'paid') {
+                            return [$payment, null];
                         }
 
                         if ($order->status !== 'pending_payment') {
                             throw new \RuntimeException(
-                                'Order is not in pending_payment status.'
+                                'Order is not in a payable status.'
                             );
                         }
 
+                        // Convert reserved inventory into sales.
                         foreach ($order->orderLines as $orderLine) {
                             $inventory = Inventory::where(
                                 'product_id',
@@ -481,37 +525,30 @@ class PaymentController extends Controller
                             );
                         }
 
-                        $payment->update([
-                            'status' => 'succeeded',
-                            'succeeded_at' => now(),
-                        ]);
-
                         $order->update([
                             'status' => 'paid',
                             'paid_at' => now(),
                         ]);
 
-                        return [$payment, false];
+                        return [$payment, null];
                     }
                 );
 
-                // Late payment: issue a full refund outside the DB transaction.
-                if ($isLatePayment) {
+                // Process refunds outside the database transaction.
+                if ($refundReason !== null) {
                     $refund = $refundService->create(
                         $payment,
                         null,
-                        'late_payment'
+                        $refundReason
                     );
 
                     if ($refund->status === 'failed') {
                         throw new \RuntimeException(
-                            'Late payment refund failed and requires manual review.'
+                            'Payment refund failed and requires manual review.'
                         );
                     }
                 }
-            }
-
-            elseif ($event->type === 'checkout.session.expired') {
+            } elseif ($event->type === 'checkout.session.expired') {
                 $session = $event->data->object;
 
                 DB::transaction(function () use ($session) {
@@ -520,13 +557,12 @@ class PaymentController extends Controller
                         ->lockForUpdate()
                         ->first();
 
-                    if ($payment === null) {
+                    if (! $payment) {
                         throw new \RuntimeException(
                             'No local payment found for expired Stripe Checkout Session.'
                         );
                     }
 
-                    // Never overwrite a successful payment.
                     if ($payment->status === 'succeeded') {
                         return;
                     }
@@ -536,12 +572,7 @@ class PaymentController extends Controller
                         'failure_reason' => 'Stripe Checkout Session expired.',
                     ]);
                 });
-            }
-            /*
-            * Asynchronous payment failed.
-            * Stripe sends this event when a delayed payment method fails.
-            */
-            elseif ($event->type === 'checkout.session.async_payment_failed') {
+            } elseif ($event->type === 'checkout.session.async_payment_failed') {
                 $session = $event->data->object;
 
                 DB::transaction(function () use ($session) {
@@ -550,42 +581,23 @@ class PaymentController extends Controller
                         ->lockForUpdate()
                         ->first();
 
-                    if ($payment === null) {
+                    if (! $payment) {
                         throw new \RuntimeException(
                             'No local payment found for failed Stripe Checkout Session.'
                         );
                     }
 
-                    // Do not overwrite a successful payment.
                     if ($payment->status === 'succeeded') {
                         return;
-                    }
-
-                    $order = Order::where('id', $payment->order_id)
-                        ->lockForUpdate()
-                        ->first();
-
-                    if ($order === null) {
-                        throw new \RuntimeException(
-                            'No local order found for failed Stripe payment.'
-                        );
                     }
 
                     $payment->update([
                         'status' => 'failed',
                         'failure_reason' => 'Stripe reported asynchronous payment failure.',
                     ]);
-
-                    // Keep the order pending_payment for now.
-                    // Your business rules can decide whether to cancel it.
                 });
             }
 
-            /*
-            * Other event types are recorded and ignored for now.
-            */
-
-            // The event was handled successfully.
             $webhookEvent->update([
                 'status' => 'processed',
                 'processed_at' => now(),
@@ -593,13 +605,11 @@ class PaymentController extends Controller
             ]);
 
         } catch (\Throwable $e) {
-            // Store the processing failure after any DB transaction rolls back.
             $webhookEvent->update([
                 'status' => 'failed',
                 'error_message' => $e->getMessage(),
             ]);
 
-            // Return an error so Stripe can retry the webhook.
             throw $e;
         }
 
@@ -607,4 +617,5 @@ class PaymentController extends Controller
             'message' => 'Webhook received.',
         ], 200);
     }
+
 }
