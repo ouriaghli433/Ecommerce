@@ -17,7 +17,10 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::query();
+        $query = Product::query()
+            ->with(['images' => function ($query) {
+            $query->orderBy('display_order');
+            }]);
         if(!$request->user() || $request->user()->role !== 'admin'){
             $query->where('is_active' , true);
         }
@@ -59,7 +62,9 @@ class ProductController extends Controller
         if (!$product->is_active && $request->user()?->role !== 'admin') {
             abort(404);
         }
-
+        $product->load(['images' => function ($query) {
+            $query->orderBy('display_order');
+        }]);
         return response()->json([
             'product' => $product,
         ]);

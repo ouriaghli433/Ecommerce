@@ -26,6 +26,8 @@ use Illuminate\Support\Facades\Route;
     // Product
     Route::get('/product', [ProductController::class, 'index']);
     Route::get('/product/{product}', [ProductController::class, 'show']);
+    Route::get('/products/{product}/images', [ProductImageController::class,'index',]);
+    Route::get('/products/{product}/images/{image}', [ProductImageController::class,'show',]);
     // Cart
     Route::get('/cart', [CartController::class, 'show']);
     Route::post('/cart', [CartController::class, 'store']);
@@ -66,7 +68,8 @@ Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
     // Coupons
     Route::apiResource('coupons', CouponController::class);
     // Product Images
-    Route::apiResource('products.images',ProductImageController::class);
+    Route::apiResource('products.images', ProductImageController::class)
+        ->except(['index', 'show']);    
     // Orders
     Route::patch('/orders/{order}/status', [OrderController::class, 'update']);
     // Shipping Prices
