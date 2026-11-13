@@ -18,6 +18,11 @@ class InventoryService
         ?string $referenceId = null,
         ?string $createdBy = null,
     ): InventoryMovement {
+        if ($quantity <= 0) {
+            throw ValidationException::withMessages([
+                'quantity' => ['Quantity must be greater than zero.'],
+            ]);
+        }
         return DB::transaction(function () use (
             $inventory,
             $type,
@@ -32,6 +37,33 @@ class InventoryService
                 ->lockForUpdate()
                 ->findOrFail($inventory->id);
             
+            // Check if this movement was already recorded.
+            if ($referenceType !== null && $referenceId !== null) {
+                $existingMovement = InventoryMovement::query()
+                    ->where('inventory_id', $inventory->id)
+                    ->where('movement_type', $type)
+                    ->where('reference_type', $referenceType)
+                    ->where('reference_id', $referenceId)
+                    ->first();
+
+                if ($existingMovement) {
+                    $expectedQuantity = in_array(
+                        $type,
+                        ['damage', 'sale', 'release'],
+                        true
+                    ) ? -$quantity : $quantity;
+
+                    if ((int) $existingMovement->quantity !== $expectedQuantity) {
+                        throw ValidationException::withMessages([
+                            'quantity' => [
+                                'This inventory movement already exists with a different quantity.',
+                            ],
+                        ]);
+                    }
+
+                    return $existingMovement;
+                }
+            }
             // to define the sign of quantity, increase + or decreased -
             $movementQuantity = match ($type) {
                 'purchase', 'return', 'reservation' => $quantity,
