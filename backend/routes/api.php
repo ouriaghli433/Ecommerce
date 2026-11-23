@@ -33,6 +33,8 @@ use Illuminate\Support\Facades\Route;
     Route::post('/cart', [CartController::class, 'store']);
     Route::patch('/cart/{cartLineId}', [CartController::class, 'update']);
     Route::delete('/cart/{cartLineId}', [CartController::class, 'destroy']);
+    // Shipping Cities
+    Route::get('/shipping-cities', [ShippingPriceController::class, 'cities']);
     // Paiment
     Route::post('/stripe/webhook', [PaymentController::class,'handleWebhook',]);
 
