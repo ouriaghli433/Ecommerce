@@ -64,4 +64,13 @@ class ShippingPriceController extends Controller
             'message' => 'Shipping price disabled successfully.',
         ]);
     }
+    public function cities()
+    {
+        $cities = ShippingPrice::where('is_active', true)
+            ->orderBy('city')
+            ->get(['id', 'city', 'cost']);
+        return response()->json([
+            'cities' => $cities,
+        ]);
+    }
 }
