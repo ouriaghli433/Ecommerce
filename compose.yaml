@@ -58,6 +58,9 @@ services:
     container_name: ecommerce-redis
 
   frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     image: ecommerce-frontend:dev
     container_name: ecommerce-frontend
     working_dir: /app
