@@ -1,6 +1,7 @@
 FROM php:8.5-fpm AS base
 
 RUN apt-get update \
+    && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
         libpq-dev \
         libicu-dev \
