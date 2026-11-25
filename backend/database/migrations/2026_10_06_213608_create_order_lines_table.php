@@ -23,6 +23,7 @@ return new class extends Migration
                 ->restrictOnDelete()
                 ->cascadeOnUpdate();
 
+            $table->unique(['order_id', 'product_id']); // to avoid two order lines from same product
             $table->timestamps();
         });
     }

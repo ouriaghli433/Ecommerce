@@ -13,10 +13,11 @@ return new class extends Migration
     {
         Schema::create('carts', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('user_id')->constrained('users')
+            $table->foreignUuid('user_id')->nullable()->constrained('users')
                 ->cascadeOnDelete()
                 ->cascadeOnUpdate();
             $table->enum('status', ['active', 'converted', 'abandoned'])->default('active');
+            $table->uuid('guest_token')->nullable()->unique();
             $table->timestamps();
         });
     }

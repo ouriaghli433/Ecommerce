@@ -1,0 +1,29 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class CartLine extends Model
+{
+    use HasFactory, HasUuids;
+
+    protected $fillable = [
+        'quantity',
+        'unit_price',
+        'cart_id',
+        'product_id'
+    ];
+
+    public function cart()
+    {
+        return $this->belongsTo(Cart::class);
+    }
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
+}

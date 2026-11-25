@@ -1,0 +1,100 @@
+<?php
+
+namespace App\Http\Controllers\Product;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Product\StoreProductRequest;
+use App\Http\Requests\Product\UpdateProductRequest;
+use App\Models\Product;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+
+class ProductController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $request)
+    {
+        $query = Product::query()
+            ->with(['images' => function ($query) {
+            $query->orderBy('display_order');
+            }]);
+        if(!$request->user() || $request->user()->role !== 'admin'){
+            $query->where('is_active' , true);
+        }
+        $products = $query->get();
+        return response()->json([
+            'products' => $products,
+        ]);
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(StoreProductRequest $request)
+    {
+        $data = $request->validated();
+
+        return DB::transaction(function() use ($data){
+
+            $product = Product::create($data);
+
+            $product->inventory()->create([
+                'on_hand' => 0,
+                'reserved' => 0
+            ]);
+
+            $product->load('inventory');
+
+            return response()->json([
+                'product' => $product,
+            ], 201);
+        });
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(Product $product, Request $request )
+    {
+        if (!$product->is_active && $request->user()?->role !== 'admin') {
+            abort(404);
+        }
+        $product->load(['images' => function ($query) {
+            $query->orderBy('display_order');
+        }]);
+        return response()->json([
+            'product' => $product,
+        ]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(UpdateProductRequest $request, Product $product)
+    {
+        $data = $request->validated();
+        $product->update($data);
+
+        return response()->json([
+            'product' => $product,
+        ]);
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Product $product)
+    {
+        $product->update([
+            'is_active' => false,
+        ]);
+
+        return response()->json([
+            'message' => 'Product archived successfully.',
+            'product' => $product,
+        ]);
+    }
+}

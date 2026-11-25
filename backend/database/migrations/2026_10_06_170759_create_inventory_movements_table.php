@@ -25,6 +25,15 @@ return new class extends Migration
             $table->string('reference_type')->nullable();
             $table->uuid('reference_id')->nullable();
             $table->timestamps();
+            $table->unique(
+                [
+                    'inventory_id',
+                    'movement_type',
+                    'reference_type',
+                    'reference_id',
+                ],
+                'inventory_movements_reference_unique'
+            );
         });
     }
 

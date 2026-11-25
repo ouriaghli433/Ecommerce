@@ -18,7 +18,8 @@ return new class extends Migration
             $table->enum('reason', ['late_payment', 'order_cancelled', 'customer_request', 'admin']);
             $table->string('provider_ref')->unique()->nullable();
 
-            $table->foreignUuid('payment_id')->constrained('payments')
+            $table->foreignUuid('payment_id')->unique()
+                ->constrained('payments')
                 ->restrictOnDelete()
                 ->cascadeOnUpdate();
             $table->foreignUuid('created_by')->nullable()->constrained('users')
