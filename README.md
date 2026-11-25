@@ -196,4 +196,4 @@ docker compose exec backend php artisan test
 The GitHub Actions workflow ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) automatically runs on pushes and pull requests to:
 1. Build the `ecommerce-backend:dev` Docker image.
 2. Scan the container image for `HIGH` and `CRITICAL` vulnerabilities using **Trivy**.
-3. Boot the service stack with Docker Compose, run migrations, and execute the PHPUnit test suite.
+3. Boot the service stack with Docker Compose, run migrations, and execute the PHPUnit test suite
