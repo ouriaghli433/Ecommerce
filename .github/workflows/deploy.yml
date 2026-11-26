@@ -1,0 +1,32 @@
+
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install sshpass
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass
+
+      - name: Deploy to Azure VPS
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          sshpass -e ssh \
+            -o StrictHostKeyChecking=no \
+            -o ConnectTimeout=30 \
+            "$VPS_USER@$VPS_HOST" \
+            "cd /home/azureuser/Ecommerce && \
+            git pull --ff-only origin main && \
+            docker compose --env-file backend/.env -f compose.yaml -f compose.prod.yaml build && \
+            docker compose --env-file backend/.env -f compose.yaml -f compose.prod.yaml up -d && \
