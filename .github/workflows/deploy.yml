@@ -22,11 +22,10 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
-          sshpass -e ssh \
-            -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=30 \
-            "$VPS_USER@$VPS_HOST" \
-            "cd /home/azureuser/Ecommerce && \
-            git pull --ff-only origin main && \
-            docker compose --env-file backend/.env -f compose.yaml -f compose.prod.yaml build && \
-            docker compose --env-file backend/.env -f compose.yaml -f compose.prod.yaml up -d && \
+          sshpass -e ssh -o StrictHostKeyChecking=no "$VPS_USER@$VPS_HOST" "
+            cd /home/azureuser/Ecommerce &&
+            git pull --ff-only origin main &&
+            docker compose --env-file backend/.env -f compose.yaml -f compose.prod.yaml build &&
+            docker compose --env-file backend/.env -f compose.yaml -f compose.prod.yaml up -d &&
+            docker compose --env-file backend/.env -f compose.yaml -f compose.prod.yaml exec -T backend php artisan migrate --force
+          "
