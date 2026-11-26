@@ -1,0 +1,41 @@
+
+services:
+  backend:
+    build:
+      target: production
+    image: ecom-backend:latest
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    expose:
+      - "9000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    image: ecom-frontend:latest
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: Ecom-nginx
+    ports:
+      - "80:80"
+      #- "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      #- ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+
+  worker:
+    image: ecom-backend:latest
+    restart: unless-stopped
+
+  scheduler:
+    image: ecom-backend:latest
+    restart: unless-stopped

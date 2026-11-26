@@ -1,0 +1,34 @@
+services:
+
+  backend:
+    build:
+      target: development
+    image: ecom-backend:dev
+    container_name: Ecom-backend
+    command: ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/var/www/html/
+      - Ecom_backend_vendor:/var/www/html/vendor # Keeps Composer dependencies persistent across container recreations.
+    
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+
+    image: ecom-frontend:dev
+    container_name: Ecom-frontend
+
+    ports:
+      - "3000:3000"
+
+    volumes:
+      - ./frontend:/app
+      - Ecom_frontend_node_modules:/app/node_modules
+    
+    
+volumes:
+  Ecom_backend_vendor:
+  Ecom_frontend_node_modules:
