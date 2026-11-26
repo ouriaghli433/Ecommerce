@@ -3,6 +3,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    image: ecom-backend:latest
     working_dir: /var/www/html
     container_name: Ecom-backend
     depends_on:
@@ -11,6 +12,7 @@ services:
 
   database:
     image: postgres:15-alpine
+    container_name: Ecom-database
     environment:
       - POSTGRES_DB=${DB_DATABASE}
       - POSTGRES_USER=${DB_USERNAME}
@@ -20,9 +22,10 @@ services:
     
   redis:
     image: redis:7-alpine
+    container_name: Ecom-redis
 
   worker:
-    image: Ecom-backend:latest
+    image: ecom-backend:latest
     working_dir: /var/www/html
     command: ["php", "artisan", "queue:work", "redis" ,"--tries=3","--sleep=3","--timeout=90"]
     depends_on:
@@ -30,7 +33,7 @@ services:
       - redis
 
   scheduler:
-    image: Ecom-backend:latest
+    image: ecom-backend:latest
     working_dir: /var/www/html
     command: ["php", "artisan", "schedule:work"]
     depends_on:
